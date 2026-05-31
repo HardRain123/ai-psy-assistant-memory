@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from pydantic import BaseModel
 import sqlite3
 from datetime import datetime, timedelta
 import uuid
+from typing import Optional
 
 
 app = FastAPI()
@@ -24,6 +25,24 @@ class SaveSessionMessageRequest(BaseModel):
 class SaveUserProfileRequest(BaseModel):
     user_id: str
     profile_memory: str
+
+
+class SaveCarePlanRequest(BaseModel):
+    user_id: str
+    plan_text: str
+
+
+class SaveSessionSummaryRequest(BaseModel):
+    user_id: str
+    session_id: str
+    summary: str
+    core_topics: str = ""
+    next_focus: str = ""
+
+
+class FinalizeSessionRequest(BaseModel):
+    user_id: str
+    session_id: Optional[str] = None
 
 
 def init_db():
@@ -48,6 +67,7 @@ def init_db():
         user_id TEXT NOT NULL,
         started_at TEXT NOT NULL,
         ended_at TEXT,
+        final_saved_at TEXT,
         status TEXT NOT NULL DEFAULT 'open'
     )
     """)
@@ -78,6 +98,14 @@ def init_db():
         role TEXT NOT NULL,
         content TEXT NOT NULL,
         created_at TEXT NOT NULL
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS care_plans (
+        user_id TEXT PRIMARY KEY,
+        plan_text TEXT NOT NULL,
+        updated_at TEXT NOT NULL
     )
     """)
 
@@ -118,12 +146,10 @@ def calc_stage(started_at: datetime):
 
     if elapsed < 5:
         stage = "opening"
-    elif elapsed < 40:
-        stage = "exploring"
     elif elapsed < 48:
-        stage = "closing"
+        stage = "exploring"
     elif elapsed < 50:
-        stage = "ending"
+        stage = "closing"
     else:
         stage = "ended"
 
@@ -183,6 +209,7 @@ def create_session(cur, user_id: str):
         "can_start_new_session": False,
         "daily_limit_reached": False,
         "message": "new session created",
+        "final_saved": False,
     }
 
 
@@ -259,7 +286,7 @@ def session_status(user_id: str):
 
         cur.execute(
             """
-            SELECT id, started_at, ended_at, status
+            SELECT id, started_at, ended_at, status,final_saved_at
             FROM sessions
             WHERE user_id = ?
             ORDER BY started_at DESC
@@ -277,8 +304,8 @@ def session_status(user_id: str):
                 "message": "可以开始今天的新咨询。",
             }
 
-        session_id, started_at_str, ended_at_str, status = row
-
+        session_id, started_at_str, ended_at_str, status, final_saved_at = row
+        final_saved = bool(final_saved_at)
         # 最近 session 已结束
         if status == "ended":
             today = datetime.now().date()
@@ -308,6 +335,7 @@ def session_status(user_id: str):
                     "can_start_new_session": False,
                     "daily_limit_reached": True,
                     "message": "今天的正式咨询已经结束，明天可以开始下一次咨询。",
+                    "final_saved": final_saved,
                 }
 
             result = create_session(cur, user_id)
@@ -349,6 +377,7 @@ def session_status(user_id: str):
                 "can_continue": False,
                 "can_start_new_session": False,
                 "daily_limit_reached": True,
+                "final_saved": final_saved,
                 "message": "本次 50 分钟咨询已经结束，明天可以开始下一次咨询。",
             }
 
@@ -366,6 +395,7 @@ def session_status(user_id: str):
             "is_new_session_str": bool_text(False),
             "can_continue": True,
             "can_start_new_session": False,
+            "final_saved": final_saved,
             "daily_limit_reached": False,
             "message": "session active",
         }
@@ -426,6 +456,109 @@ def start_session(user_id: str):
 
     except Exception as e:
         return {"error": str(e)}
+
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.post("/session/finalize")
+def finalize_session(req: FinalizeSessionRequest):
+    """
+    标记一次咨询已经完成最终保存。
+
+    注意：
+    - 这个接口应该放在 session summary / profile / care_plan 都保存成功之后调用。
+    - 它是幂等的：同一个 session 调用多次，不会重复改变 final_saved_at。
+    """
+
+    conn = None
+
+    try:
+        conn = sqlite3.connect(DB)
+        cur = conn.cursor()
+
+        if req.session_id:
+            cur.execute(
+                """
+                SELECT id, user_id, started_at, ended_at, status, final_saved_at
+                FROM sessions
+                WHERE id = ? AND user_id = ?
+                LIMIT 1
+                """,
+                (req.session_id, req.user_id),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT id, user_id, started_at, ended_at, status, final_saved_at
+                FROM sessions
+                WHERE user_id = ?
+                ORDER BY started_at DESC
+                LIMIT 1
+                """,
+                (req.user_id,),
+            )
+
+        row = cur.fetchone()
+
+        if not row:
+            return {
+                "success": False,
+                "message": "session not found",
+                "final_saved": False,
+            }
+
+        session_id, user_id, started_at, ended_at, status, final_saved_at = row
+
+        if final_saved_at:
+            return {
+                "success": True,
+                "already_finalized": True,
+                "user_id": user_id,
+                "session_id": session_id,
+                "status": status,
+                "ended_at": ended_at,
+                "final_saved": True,
+                "final_saved_at": final_saved_at,
+                "message": "session already finalized",
+            }
+
+        now = datetime.now().isoformat()
+        new_ended_at = ended_at or now
+
+        cur.execute(
+            """
+            UPDATE sessions
+            SET status = ?, ended_at = ?, final_saved_at = ?
+            WHERE id = ? AND user_id = ? AND final_saved_at IS NULL
+            """,
+            ("ended", new_ended_at, now, session_id, user_id),
+        )
+
+        conn.commit()
+
+        return {
+            "success": True,
+            "already_finalized": False,
+            "user_id": user_id,
+            "session_id": session_id,
+            "status": "ended",
+            "ended_at": new_ended_at,
+            "final_saved": True,
+            "final_saved_at": now,
+            "message": "session finalized",
+        }
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+
+        return {
+            "success": False,
+            "error": str(e),
+            "final_saved": False,
+        }
 
     finally:
         if conn:
@@ -614,14 +747,6 @@ def delete_session(user_id: str):
 
 def bool_text(value):
     return "true" if value else "false"
-
-
-class SaveSessionSummaryRequest(BaseModel):
-    user_id: str
-    session_id: str
-    summary: str
-    core_topics: str = ""
-    next_focus: str = ""
 
 
 @app.post("/session-summary")
@@ -939,3 +1064,70 @@ def get_user_profile(user_id: str):
     finally:
         if conn:
             conn.close()
+
+
+@app.get("/care-plan/{user_id}")
+def get_care_plan(user_id: str):
+    conn = sqlite3.connect(DB)
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT plan_text, updated_at
+        FROM care_plans
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "exists": False,
+            "user_id": user_id,
+            "plan_text": "暂无咨询计划表。",
+            "updated_at": None,
+        }
+
+    return {
+        "exists": True,
+        "user_id": user_id,
+        "plan_text": row[0],
+        "updated_at": row[1],
+    }
+
+
+@app.post("/care-plan")
+def save_care_plan(req: SaveCarePlanRequest):
+    content = req.plan_text.strip()
+
+    if not content:
+        return {
+            "success": False,
+            "message": "empty care plan skipped",
+        }
+
+    conn = sqlite3.connect(DB)
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO care_plans (user_id, plan_text, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+            plan_text = excluded.plan_text,
+            updated_at = excluded.updated_at
+        """,
+        (req.user_id, content, datetime.now().isoformat()),
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "user_id": req.user_id,
+        "message": "care plan saved",
+    }
