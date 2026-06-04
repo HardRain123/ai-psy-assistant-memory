@@ -88,6 +88,10 @@ class DifyClient:
             except httpx.HTTPStatusError as exc:
                 status = exc.response.status_code
                 body = _redact_response_text(exc.response.text)
+                last_error = exc
+                if attempt < self.max_retries and _is_transient_dify_status_error(status, body):
+                    time.sleep(min(2**attempt, 8))
+                    continue
                 raise RuntimeError(f"Dify chat request failed status={status} body={body}") from exc
             except httpx.TimeoutException as exc:
                 last_error = exc
@@ -129,6 +133,26 @@ def _redact_response_text(text: str, limit: int = 500) -> str:
     if api_key:
         cleaned = cleaned.replace(api_key, "[REDACTED]")
     return cleaned
+
+
+def _is_transient_dify_status_error(status: int, body: str) -> bool:
+    if status in {502, 503, 504}:
+        return True
+
+    transient_markers = (
+        "502 Bad Gateway",
+        "503 Service Unavailable",
+        "504 Gateway Timeout",
+        "PluginInvokeError",
+        "Server Unavailable Error",
+        "Connection aborted",
+        "Connection reset by peer",
+        "ConnectionResetError",
+        "API request failed with status code 502",
+        "API request failed with status code 503",
+        "API request failed with status code 504",
+    )
+    return status == 400 and any(marker in body for marker in transient_markers)
 
 
 def _bool_env(name: str) -> bool:

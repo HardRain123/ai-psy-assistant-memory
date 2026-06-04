@@ -305,6 +305,16 @@ class MvpApiTests(unittest.TestCase):
         self.assertTrue(strong_label["skipped"])
         self.assertEqual(strong_label["reason"], "strong_interpretation")
 
+        over_diagnosis = client.post(
+            "/memory",
+            json={
+                "user_id": "memory-filter",
+                "memory": "用户担心被拒绝，将自我价值与外部认可绑定，存在习得性无助。",
+            },
+        ).json()
+        self.assertTrue(over_diagnosis["skipped"])
+        self.assertEqual(over_diagnosis["reason"], "strong_interpretation")
+
     def test_handoff_markdown_and_json_generation(self):
         session = client.get("/session/status/handoff-user").json()
         session_id = session["session_id"]
