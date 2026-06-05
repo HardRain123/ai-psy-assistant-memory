@@ -164,8 +164,46 @@ def _create_schema(cur):
         CREATE TABLE IF NOT EXISTS users (
             id {serial_pk},
             user_id TEXT NOT NULL UNIQUE,
+            username TEXT,
+            password_hash TEXT,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            last_login_at TEXT,
+            disabled_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS invite_codes (
+            id {serial_pk},
+            code_hash TEXT NOT NULL UNIQUE,
+            created_by_user_id TEXT NOT NULL,
+            used_by_user_id TEXT,
+            note TEXT,
+            expires_at TEXT,
+            used_at TEXT,
+            revoked_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            user_agent TEXT,
+            ip_hash TEXT,
+            created_at TEXT NOT NULL,
+            last_seen_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            revoked_at TEXT
         )
         """
     )
@@ -330,6 +368,12 @@ def _create_schema(cur):
 
 
 def _migrate_existing_schema(cur):
+    ensure_column(cur, "users", "username", "username TEXT")
+    ensure_column(cur, "users", "password_hash", "password_hash TEXT")
+    ensure_column(cur, "users", "is_admin", "is_admin INTEGER NOT NULL DEFAULT 0")
+    ensure_column(cur, "users", "last_login_at", "last_login_at TEXT")
+    ensure_column(cur, "users", "disabled_at", "disabled_at TEXT")
+
     ensure_column(cur, "memories", "session_id", "session_id TEXT DEFAULT ''")
     ensure_column(cur, "memories", "memory_type", "memory_type TEXT NOT NULL DEFAULT 'general'")
     ensure_column(cur, "memories", "importance", "importance INTEGER NOT NULL DEFAULT 1")
@@ -381,6 +425,11 @@ def _migrate_existing_schema(cur):
 
 
 def _create_indexes(cur):
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_invite_codes_hash ON invite_codes(code_hash)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_codes_created ON invite_codes(created_at)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token_hash)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id, expires_at)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions(user_id, started_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_open_auto_close ON sessions(status, auto_close_at)")

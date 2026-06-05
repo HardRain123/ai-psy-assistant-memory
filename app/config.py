@@ -29,6 +29,11 @@ ENABLE_DEBUG_ENDPOINTS = _bool_env("ENABLE_DEBUG_ENDPOINTS", False)
 TESTING = _bool_env("TESTING", False)
 TASK_WORKER_ENABLED = _bool_env("TASK_WORKER_ENABLED", True)
 TASK_SCAN_INTERVAL_SECONDS = _int_env("TASK_SCAN_INTERVAL_SECONDS", 60)
+AUTH_SECRET = os.getenv("AUTH_SECRET", "")
+BACKEND_SHARED_TOKEN = os.getenv("BACKEND_SHARED_TOKEN", "")
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+SESSION_TTL_DAYS = _int_env("SESSION_TTL_DAYS", 7)
 
 DATABASE_SCHEME = urlparse(DATABASE_URL).scheme
 IS_POSTGRES = DATABASE_SCHEME in {"postgres", "postgresql"}
@@ -36,6 +41,22 @@ IS_SQLITE = not IS_POSTGRES
 
 # Backward-compatible name used by older modules.
 DB = DATABASE_URL
+
+
+if APP_ENV.lower() == "production":
+    missing = [
+        name
+        for name, value in [
+            ("AUTH_SECRET", AUTH_SECRET),
+            ("BACKEND_SHARED_TOKEN", BACKEND_SHARED_TOKEN),
+        ]
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            "Missing required production environment variables: "
+            + ", ".join(missing)
+        )
 
 
 def is_testing_mode() -> bool:

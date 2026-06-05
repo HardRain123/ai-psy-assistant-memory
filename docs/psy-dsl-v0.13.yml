@@ -16,7 +16,15 @@ kind: app
 version: 0.6.0
 workflow:
   conversation_variables: []
-  environment_variables: []
+  environment_variables:
+  - description: Shared token for protected backend HTTP requests.
+    id: env-backend-shared-token
+    name: BACKEND_SHARED_TOKEN
+    selector:
+    - env
+    - BACKEND_SHARED_TOKEN
+    value: ''
+    value_type: secret
   features:
     file_upload:
       allowed_file_extensions:
@@ -939,6 +947,8 @@ workflow:
             推荐策略：
 
             - 立刻停止推进原议题。
+            - 暂停原议题，先处理当前关系反馈。
+            - 先修复关系，再决定是否回到原议题。
 
             - 承认刚才可能理解偏了、问跳了、问得太细或带入了不属于当前的话题。
 
@@ -1111,6 +1121,14 @@ workflow:
             - 不机械照读 care plan。
 
             - 不把历史计划强行覆盖当前表达。
+
+            纵向咨询事件回应原则：
+
+            - 当用户反馈任务未完成时，把它当作计划反馈来下调任务。
+
+            - 当用户表达连续几天或多次完成小动作时，先确认连续行动，再轻微连接到下一步。
+
+            - 当用户表达总结、阶段结束、下一阶段或交接时，优先做阶段性整理和交接。
 
 
             ## G. 普通探索输入
@@ -1337,7 +1355,7 @@ workflow:
         body:
           data: []
           type: none
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: get
         params: ''
         retry_config:
@@ -1379,7 +1397,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"memory\"\
               : \"{{#1779940110651.memory#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -1445,7 +1463,7 @@ workflow:
         body:
           data: []
           type: none
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: get
         params: ''
         retry_config:
@@ -1965,7 +1983,7 @@ workflow:
               : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"user\",\n  \"content\"\
               : \"{{#sys.query#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -2008,7 +2026,7 @@ workflow:
               : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"assistant\",\n\
               \  \"content\": \"{{#1779205480903.text#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -2052,7 +2070,7 @@ workflow:
               \  \"content\": \"{{#1779708919320.text#}}\"\n}"
           type: json
         desc: ''
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         isInIteration: false
         isInLoop: false
         method: post
@@ -2098,7 +2116,7 @@ workflow:
               ,\n  \"core_topics\": \"{{#1779718251824.core_topics#}}\",\n  \"next_focus\"\
               : \"{{#1779718251824.next_focus#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -2287,7 +2305,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"profile_memory\"\
               : \"{{#1780038042537.profile_memory#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -2376,7 +2394,7 @@ workflow:
           data: []
           type: none
         desc: ''
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         isInIteration: false
         isInLoop: false
         method: get
@@ -2581,7 +2599,7 @@ workflow:
               \  \"content\": \"{{#1779939946740.text#}}\"\n}"
           type: json
         desc: ''
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         isInIteration: false
         isInLoop: false
         method: post
@@ -2682,7 +2700,7 @@ workflow:
         body:
           data: []
           type: none
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: get
         params: ''
         retry_config:
@@ -3028,7 +3046,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"plan_text\"\
               : \"{{#1779963775579.text#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -3361,7 +3379,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
               : \"{{#1779349355740.session_id#}}\"\n}"
           type: json
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         method: post
         params: ''
         retry_config:
@@ -3527,7 +3545,7 @@ workflow:
               \  \"content\": \"{{#1780061016312.text#}}\"\n}"
           type: json
         desc: ''
-        headers: ''
+        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
         isInIteration: false
         isInLoop: false
         method: post

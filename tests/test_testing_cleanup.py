@@ -8,6 +8,10 @@ TEST_DB = Path(tempfile.gettempdir()) / "mvp-test.db"
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB}")
 os.environ.setdefault("TASK_WORKER_ENABLED", "false")
 os.environ.setdefault("ENABLE_DEBUG_ENDPOINTS", "false")
+os.environ.setdefault("AUTH_SECRET", "test-auth-secret")
+os.environ.setdefault("BACKEND_SHARED_TOKEN", "test-backend-token")
+os.environ.setdefault("ADMIN_USERNAME", "admin")
+os.environ.setdefault("ADMIN_PASSWORD", "admin-password")
 
 from fastapi.testclient import TestClient
 
@@ -16,6 +20,7 @@ from app.main import app
 
 
 client = TestClient(app)
+client.headers.update({"X-Backend-Token": "test-backend-token"})
 
 
 def restore_env(saved: dict[str, str | None]):

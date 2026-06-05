@@ -542,7 +542,7 @@ def _backend_get(backend_url: str, path: str) -> dict:
         return _backend_request_powershell("GET", f"{backend_url}{path}")
     try:
         with httpx.Client(timeout=30, trust_env=_trust_backend_httpx_env()) as client:
-            response = client.get(f"{backend_url}{path}")
+            response = client.get(f"{backend_url}{path}", headers=_backend_headers())
     except httpx.HTTPError as exc:
         fallback = _backend_request_powershell("GET", f"{backend_url}{path}")
         if fallback.get("ok"):
@@ -557,7 +557,7 @@ def _backend_post(backend_url: str, path: str, payload: dict) -> dict:
         return _backend_request_powershell("POST", f"{backend_url}{path}", payload)
     try:
         with httpx.Client(timeout=30, trust_env=_trust_backend_httpx_env()) as client:
-            response = client.post(f"{backend_url}{path}", json=payload)
+            response = client.post(f"{backend_url}{path}", json=payload, headers=_backend_headers())
     except httpx.HTTPError as exc:
         fallback = _backend_request_powershell("POST", f"{backend_url}{path}", payload)
         if fallback.get("ok") or fallback.get("status_code"):
@@ -565,6 +565,13 @@ def _backend_post(backend_url: str, path: str, payload: dict) -> dict:
         return {"ok": False, "error": exc.__class__.__name__, "fallback": fallback, "payload": None}
 
     return _parse_backend_response(response)
+
+
+def _backend_headers() -> dict[str, str]:
+    token = (os.getenv("BACKEND_SHARED_TOKEN") or "").strip()
+    if not token:
+        return {}
+    return {"X-Backend-Token": token}
 
 
 def _parse_backend_response(response: httpx.Response) -> dict:
@@ -660,6 +667,10 @@ try {
         Uri = $Uri
         TimeoutSec = 60
         UseBasicParsing = $true
+    }
+    $backendToken = [Environment]::GetEnvironmentVariable('BACKEND_SHARED_TOKEN')
+    if ($backendToken) {
+        $params['Headers'] = @{ 'X-Backend-Token' = $backendToken }
     }
     if ($body.Trim().Length -gt 0) {
         $params['Body'] = $body

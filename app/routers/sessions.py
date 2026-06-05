@@ -63,6 +63,7 @@ def session_status(user_id: str):
             started_at = parse_dt(started_at_str)
             today = datetime.now().date()
             elapsed, remaining, current_stage = calc_stage(started_at)
+            auto_close_reached = bool(auto_close_at and parse_dt(auto_close_at) <= datetime.now())
 
             if started_at.date() < today:
                 end_session_workflow(
@@ -74,7 +75,7 @@ def session_status(user_id: str):
                 logger.info("previous_day_session_closed user_id=%s session_id=%s", user_id, session_id)
                 return create_session(cur, user_id)
 
-            if current_stage == "ended":
+            if current_stage == "ended" or auto_close_reached:
                 result = end_session_workflow(
                     cur,
                     session_id,

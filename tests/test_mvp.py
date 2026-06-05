@@ -16,10 +16,15 @@ TEST_DB = TEST_DIR / "mvp-test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
 os.environ["TASK_WORKER_ENABLED"] = "false"
 os.environ["ENABLE_DEBUG_ENDPOINTS"] = "false"
+os.environ["AUTH_SECRET"] = "test-auth-secret"
+os.environ["BACKEND_SHARED_TOKEN"] = "test-backend-token"
+os.environ["ADMIN_USERNAME"] = "admin"
+os.environ["ADMIN_PASSWORD"] = "admin-password"
 
-for path in [TEST_DB, TEST_DIR / "mvp-test.db-wal", TEST_DIR / "mvp-test.db-shm"]:
-    if path.exists():
-        path.unlink()
+if "app.main" not in sys.modules:
+    for path in [TEST_DB, TEST_DIR / "mvp-test.db-wal", TEST_DIR / "mvp-test.db-shm"]:
+        if path.exists():
+            path.unlink()
 
 from fastapi.testclient import TestClient
 
@@ -30,6 +35,7 @@ from app.services.session_tasks import run_session_task_once
 
 
 client = TestClient(app)
+client.headers.update({"X-Backend-Token": "test-backend-token"})
 
 
 def latest_session_id(user_id: str) -> str:
@@ -56,8 +62,11 @@ def latest_dsl_path() -> Path:
 
 
 def make_latest_session_expired(user_id: str, days_ago: int = 0):
-    started_at = datetime.now() - timedelta(days=days_ago, minutes=SESSION_OFFSET_MINUTES)
-    auto_close_at = started_at + timedelta(minutes=50)
+    now = datetime.now()
+    started_at = now - timedelta(days=days_ago, minutes=SESSION_OFFSET_MINUTES)
+    if days_ago == 0 and started_at.date() < now.date():
+        started_at = datetime.combine(now.date(), datetime.min.time())
+    auto_close_at = now - timedelta(minutes=1) if days_ago == 0 else started_at + timedelta(minutes=50)
     with transaction() as cur:
         cur.execute(
             """
@@ -94,6 +103,22 @@ class MvpApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data["status"], "ok")
         self.assertTrue(data["database"]["ok"])
+
+    def test_sensitive_api_requires_backend_token(self):
+        raw_client = TestClient(app)
+        missing = raw_client.get("/context/protected-user")
+        wrong = raw_client.get(
+            "/context/protected-user",
+            headers={"X-Backend-Token": "wrong-token"},
+        )
+        allowed = raw_client.get(
+            "/context/protected-user",
+            headers={"X-Backend-Token": "test-backend-token"},
+        )
+
+        self.assertEqual(missing.status_code, 401)
+        self.assertEqual(wrong.status_code, 401)
+        self.assertEqual(allowed.status_code, 200)
 
     def test_new_user_first_status_creates_session(self):
         data = client.get("/session/status/new-user").json()
@@ -457,7 +482,10 @@ class MvpApiTests(unittest.TestCase):
         client.post("/session/finalize", json={"user_id": user_id, "session_id": first_session_id})
 
         with transaction() as cur:
-            yesterday = datetime.now() - timedelta(days=1)
+            yesterday = datetime.combine(
+                datetime.now().date() - timedelta(days=1),
+                datetime.min.time(),
+            ) + timedelta(hours=10)
             cur.execute(
                 """
                 UPDATE sessions
@@ -585,7 +613,10 @@ class MvpApiTests(unittest.TestCase):
         self.assertIn(first_session_id, first_plan)
 
         with transaction() as cur:
-            yesterday = datetime.now() - timedelta(days=1)
+            yesterday = datetime.combine(
+                datetime.now().date() - timedelta(days=1),
+                datetime.min.time(),
+            ) + timedelta(hours=10)
             cur.execute(
                 """
                 UPDATE sessions

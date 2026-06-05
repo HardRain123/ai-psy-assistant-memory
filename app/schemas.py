@@ -55,3 +55,27 @@ class GenerateHandoffRequest(BaseModel):
 
 class E2ETimeShiftRequest(BaseModel):
     days: int = 1
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    inviteCode: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class SessionTokenRequest(BaseModel):
+    sessionToken: str = ""
+
+
+class CreateInviteRequest(BaseModel):
+    note: str = ""
+    expires_at: Optional[str] = None
+
+
+class RevokeInviteRequest(BaseModel):
+    invite_id: int
