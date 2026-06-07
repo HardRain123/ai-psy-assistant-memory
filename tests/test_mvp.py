@@ -115,10 +115,15 @@ class MvpApiTests(unittest.TestCase):
             "/context/protected-user",
             headers={"X-Backend-Token": "test-backend-token"},
         )
+        aggregate_missing = raw_client.post(
+            "/dify/turn-prep",
+            json={"user_id": "protected-user", "query": "hello"},
+        )
 
         self.assertEqual(missing.status_code, 401)
         self.assertEqual(wrong.status_code, 401)
         self.assertEqual(allowed.status_code, 200)
+        self.assertEqual(aggregate_missing.status_code, 401)
 
     def test_new_user_first_status_creates_session(self):
         data = client.get("/session/status/new-user").json()
@@ -143,6 +148,36 @@ class MvpApiTests(unittest.TestCase):
         self.assertTrue(data["is_new_session"])
         self.assertIsInstance(data["is_new_session_str"], str)
         self.assertIn(data["session_stage"], {"trust", "deep", "reframe", "action", "ending", "ended"})
+
+    def test_dify_turn_prep_aggregates_session_context_transcript_and_care_plan(self):
+        user_id = "turn-prep-user"
+        query = "I feel stuck before starting homework."
+        client.post("/care-plan", json={"user_id": user_id, "plan_text": "Keep the first step tiny."})
+
+        response = client.post("/dify/turn-prep", json={"user_id": user_id, "query": query})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertTrue(data["success"])
+        self.assertTrue(data["user_message_saved"])
+        self.assertEqual(data["user_id"], user_id)
+        self.assertEqual(data["status"], "open")
+        self.assertTrue(data["can_continue"])
+        self.assertIn(data["session_stage"], {"trust", "deep", "reframe", "action", "ending"})
+        self.assertIn("context_text", data)
+        self.assertIn("profile_memory", data)
+        self.assertIn("recent_session_summaries", data)
+        self.assertIn("recent_memories", data)
+        self.assertIn(query, data["transcript_text"])
+        self.assertGreaterEqual(data["message_count"], 1)
+        self.assertTrue(data["has_transcript"])
+        self.assertTrue(data["care_plan_exists"])
+        self.assertIn("Keep the first step tiny.", data["plan_text"])
+
+        session_id = data["session_id"]
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        self.assertIn(query, transcript["transcript_text"])
+        self.assertEqual(client.get(f"/care-plan/{user_id}").json()["plan_text"], data["plan_text"])
 
     def test_low_content_session_skips_summary_memory_and_formal_handoff(self):
         user_id = "low-content-user"

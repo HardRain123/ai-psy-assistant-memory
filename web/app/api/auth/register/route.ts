@@ -3,28 +3,39 @@ import { backendRequest, setSessionCookie } from '../../_lib/auth'
 function registerErrorMessage(status: number, detail: unknown) {
   const message = typeof detail === 'string' ? detail : ''
 
-  if (status === 409 || message === 'username already exists') {
+  if (message === 'email_exists') {
+    return '这个邮箱已经被注册，请换一个邮箱。'
+  }
+
+  if (message === 'invalid_email') {
+    return '请输入有效的邮箱地址。'
+  }
+
+  if (status === 409 || message === 'username_exists' || message === 'username already exists') {
     return '这个账号已经被注册，请换一个账号名。'
   }
 
-  if (message === 'password must be at least 8 characters') {
+  if (message === 'weak_password' || message === 'password must be at least 8 characters') {
     return '密码至少需要 8 个字符。'
   }
 
-  if (message === 'username must be 3-64 characters using letters, numbers, _ . @ or -') {
-    return '账号需为 3-64 个字符，只能包含字母、数字、下划线、点、@ 或短横线。'
+  if (
+    message === 'invalid_username' ||
+    message === 'username must be 3-64 characters using letters, numbers, _ . @ or -'
+  ) {
+    return '账号需要 3-64 个字符，只能包含字母、数字、下划线、点、@ 或短横线。'
   }
 
-  if (message === 'invalid invite code') {
+  if (message === 'invalid_invite_code' || message === 'invalid invite code') {
     return '邀请码不存在，请检查后重新输入。'
   }
 
-  if (message === 'invite code is not active') {
+  if (message === 'inactive_invite_code' || message === 'invite code is not active') {
     return '邀请码已被使用或已失效，请联系管理员重新生成。'
   }
 
   if (status === 400) {
-    return '注册信息不完整，请检查邀请码、账号和密码。'
+    return '注册信息不完整，请检查邀请码、账号、邮箱和密码。'
   }
 
   if (status === 401 || status === 403) {
@@ -36,14 +47,15 @@ function registerErrorMessage(status: number, detail: unknown) {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
-  if (!body.inviteCode || !body.username || !body.password) {
-    return Response.json({ error: '请填写邀请码、账号和密码。' }, { status: 400 })
+  if (!body.inviteCode || !body.username || !body.email || !body.password) {
+    return Response.json({ error: '请填写邀请码、账号、邮箱和密码。' }, { status: 400 })
   }
 
   const result = await backendRequest('/internal/auth/register', {
     method: 'POST',
     body: JSON.stringify({
       username: body.username,
+      email: body.email,
       password: body.password,
       inviteCode: body.inviteCode,
     }),
@@ -51,10 +63,7 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     const error = registerErrorMessage(result.status, result.data?.detail || result.data?.error)
-    return Response.json(
-      { error },
-      { status: result.status }
-    )
+    return Response.json({ error }, { status: result.status })
   }
 
   const loginResult = await backendRequest('/internal/auth/login', {

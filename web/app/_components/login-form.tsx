@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useState } from 'react'
 
@@ -68,6 +69,13 @@ export function LoginForm() {
           required
         />
       </label>
+
+      <Link
+        href="/forgot-password"
+        className="block text-right text-sm font-medium text-zinc-700 underline-offset-4 hover:underline"
+      >
+        忘记密码？
+      </Link>
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

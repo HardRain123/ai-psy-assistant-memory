@@ -21,6 +21,14 @@ export function sessionMaxAge() {
   return days * 24 * 60 * 60
 }
 
+function secureCookie() {
+  const override = process.env.AUTH_COOKIE_SECURE
+  if (override !== undefined) {
+    return ['1', 'true', 'yes', 'on'].includes(override.trim().toLowerCase())
+  }
+  return process.env.NODE_ENV === 'production'
+}
+
 export async function getSessionToken() {
   const cookieStore = await cookies()
   return cookieStore.get(AUTH_COOKIE)?.value || ''
@@ -31,7 +39,7 @@ export async function setSessionCookie(sessionToken: string) {
   cookieStore.set(AUTH_COOKIE, sessionToken, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureCookie(),
     path: '/',
     maxAge: sessionMaxAge(),
   })
@@ -42,7 +50,7 @@ export async function clearSessionCookie() {
   cookieStore.set(AUTH_COOKIE, '', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: secureCookie(),
     path: '/',
     maxAge: 0,
   })
@@ -94,7 +102,7 @@ export async function getCurrentUser(options: { refreshSession?: boolean } = {})
     return { authenticated: false as const, sessionToken: '' }
   }
 
-  const result = await backendRequest('/internal/auth/me', {
+  const result = await backendRequest(`/internal/auth/me${options.refreshSession ? '?rolling=true' : ''}`, {
     method: 'GET',
     sessionToken,
   })

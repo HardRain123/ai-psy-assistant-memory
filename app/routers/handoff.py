@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Query, Response
 
 from app.db import transaction
+from app.errors import public_error
 from app.schemas import GenerateHandoffRequest
 from app.services.handoff import (
     DEFAULT_USER_HANDOFF_SESSION_LIMIT,
@@ -60,7 +61,7 @@ def generate_handoff(session_id: str, req: GenerateHandoffRequest = GenerateHand
 
     except Exception as exc:
         logger.exception("generate_handoff_failed session_id=%s", session_id)
-        return {"success": False, "error": "generate_handoff_failed", "message": str(exc)}
+        return public_error("generate_handoff_failed")
 
 
 @router.get("/handoff/{document_id}")
@@ -75,7 +76,7 @@ def read_handoff(document_id: str):
 
     except Exception as exc:
         logger.exception("read_handoff_failed document_id=%s", document_id)
-        return {"success": False, "error": "read_handoff_failed", "message": str(exc)}
+        return public_error("read_handoff_failed")
 
 
 @router.get("/handoff/session/{session_id}")
@@ -88,7 +89,7 @@ def read_handoff_for_session(session_id: str):
 
     except Exception as exc:
         logger.exception("read_handoff_for_session_failed session_id=%s", session_id)
-        return {"success": False, "error": "read_handoff_for_session_failed", "message": str(exc)}
+        return public_error("read_handoff_for_session_failed")
 
 
 @router.get("/handoff/user/{user_id}")
@@ -110,7 +111,7 @@ def read_handoff_for_user(
 
     except Exception as exc:
         logger.exception("read_handoff_for_user_failed user_id=%s", user_id)
-        return {"success": False, "error": "read_handoff_for_user_failed", "message": str(exc)}
+        return public_error("read_handoff_for_user_failed")
 
 
 @router.get("/handoff/export/user/{user_id}")
@@ -133,7 +134,7 @@ def export_latest_handoff_for_user(
 
     except Exception as exc:
         logger.exception("export_handoff_for_user_failed user_id=%s", user_id)
-        return {"success": False, "error": "export_handoff_for_user_failed", "message": str(exc)}
+        return public_error("export_handoff_for_user_failed")
 
 
 @router.get("/handoff/export/{document_id}")
@@ -149,4 +150,4 @@ def export_handoff(document_id: str):
 
     except Exception as exc:
         logger.exception("export_handoff_failed document_id=%s", document_id)
-        return {"success": False, "error": "export_handoff_failed", "message": str(exc)}
+        return public_error("export_handoff_failed")

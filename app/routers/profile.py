@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from app.db import transaction
+from app.errors import public_error
 from app.schemas import SaveUserProfileRequest
 from app.services.longitudinal import merge_profile_memory
 from app.services.sessions import ensure_user
@@ -51,7 +52,7 @@ def save_user_profile(req: SaveUserProfileRequest):
 
     except Exception as exc:
         logger.exception("save_user_profile_failed user_id=%s", req.user_id)
-        return {"success": False, "error": "save_user_profile_failed", "message": str(exc)}
+        return public_error("save_user_profile_failed")
 
 
 @router.get("/profile/{user_id}")
@@ -80,4 +81,4 @@ def get_user_profile(user_id: str):
 
     except Exception as exc:
         logger.exception("get_user_profile_failed user_id=%s", user_id)
-        return {"success": False, "error": "get_user_profile_failed", "message": str(exc)}
+        return public_error("get_user_profile_failed")

@@ -2,10 +2,10 @@ export function NonMedicalNotice({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? 'space-y-2 text-xs leading-5 text-zinc-500' : 'space-y-3 text-sm leading-6 text-zinc-600'}>
       <p>
-        本服务不是医疗诊断工具，不能替代专业心理咨询、精神科医生或紧急救助。
+        本服务不是医疗诊断工具，不能替代专业心理咨询、精神科医生或紧急援助。
       </p>
       <p>
-        如果你正在经历自伤、自杀、伤害他人或其他紧急危险，请立即联系当地紧急救助，或联系身边可信任的人。
+        如果你正在经历自伤、自杀、伤害他人或其他紧急危险，请立即联系当地紧急援助，或联系身边可信任的人。
       </p>
     </div>
   )
@@ -30,7 +30,7 @@ export function CrisisNotice() {
     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
       <h2 className="text-sm font-semibold">紧急情况</h2>
       <p className="mt-2">
-        如果你正在经历自伤、自杀、伤害他人或其他紧急危险，请立即联系当地紧急救助，或联系身边可信任的人。
+        如果你正在经历自伤、自杀、伤害他人或其他紧急危险，请立即联系当地紧急援助，或联系身边可信任的人。
       </p>
     </div>
   )

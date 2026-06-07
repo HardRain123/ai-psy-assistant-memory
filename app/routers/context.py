@@ -2,7 +2,9 @@ import logging
 
 from fastapi import APIRouter
 
-from app.db import transaction
+from app.db import read_transaction
+from app.errors import public_error
+from app.services.screening import format_snapshot_for_context, get_current_snapshot
 
 
 router = APIRouter()
@@ -12,7 +14,7 @@ logger = logging.getLogger(__name__)
 @router.get("/context/{user_id}")
 def get_context(user_id: str):
     try:
-        with transaction() as cur:
+        with read_transaction() as cur:
             cur.execute(
                 """
                 SELECT profile_memory, updated_at
@@ -55,20 +57,6 @@ def get_context(user_id: str):
                     }
                 )
 
-            if session_summaries:
-                recent_session_summaries = "\n".join(
-                    [
-                        f"- 咨询总结：{item['summary']}"
-                        + (f"\n  核心主题：{item['core_topics']}" if item["core_topics"] else "")
-                        + (f"\n  下次重点：{item['next_focus']}" if item["next_focus"] else "")
-                        + (f"\n  风险等级：{item['risk_level']}" if item["risk_level"] != "none" else "")
-                        for item in session_summaries
-                        if item["summary"] and item["summary"].strip()
-                    ]
-                )
-            else:
-                recent_session_summaries = "暂无咨询总结。"
-
             cur.execute(
                 """
                 SELECT content, created_at, memory_type, importance
@@ -92,6 +80,22 @@ def get_context(user_id: str):
                 if row[0] and row[0].strip()
             ]
 
+            screening_snapshot = get_current_snapshot(cur, user_id)
+
+        if session_summaries:
+            recent_session_summaries = "\n".join(
+                [
+                    f"- 咨询总结：{item['summary']}"
+                    + (f"\n  核心主题：{item['core_topics']}" if item["core_topics"] else "")
+                    + (f"\n  下次重点：{item['next_focus']}" if item["next_focus"] else "")
+                    + (f"\n  风险等级：{item['risk_level']}" if item["risk_level"] != "none" else "")
+                    for item in session_summaries
+                    if item["summary"] and item["summary"].strip()
+                ]
+            )
+        else:
+            recent_session_summaries = "暂无咨询总结。"
+
         if recent_memory_items:
             recent_memories = "\n".join(
                 [f"- [{item['memory_type']}] {item['content']}" for item in recent_memory_items]
@@ -99,9 +103,14 @@ def get_context(user_id: str):
         else:
             recent_memories = "暂无近期细节记忆。"
 
+        screening_context = format_snapshot_for_context(screening_snapshot)
+
         context_text = f"""
 【长期画像】
 {profile_memory}
+
+【最近状态筛查】
+{screening_context}
 
 【最近咨询总结】
 {recent_session_summaries}
@@ -114,15 +123,17 @@ def get_context(user_id: str):
             "user_id": user_id,
             "profile_memory": profile_memory,
             "profile_updated_at": profile_updated_at,
+            "recent_screening": screening_context,
             "recent_session_summaries": recent_session_summaries,
             "recent_memories": recent_memories,
             "context_text": context_text,
             "raw": {
+                "mental_state_snapshot": screening_snapshot,
                 "session_summaries": session_summaries,
                 "recent_memory_items": recent_memory_items,
             },
         }
 
-    except Exception as exc:
+    except Exception:
         logger.exception("get_context_failed user_id=%s", user_id)
-        return {"success": False, "error": "get_context_failed", "message": str(exc)}
+        return public_error("get_context_failed")

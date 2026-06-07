@@ -29,20 +29,40 @@ export function AppHeader({ user }: { user: User }) {
           </p>
         </Link>
 
-        <nav className="flex items-center gap-2">
+        <nav className="flex flex-wrap items-center gap-2">
           <Link
             href="/chat"
             className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
           >
             聊天
           </Link>
+          <Link
+            href="/assessment"
+            className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+          >
+            状态评估
+          </Link>
+          <Link
+            href="/settings/account"
+            className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+          >
+            账号设置
+          </Link>
           {user.is_admin && (
-            <Link
-              href="/admin/invites"
-              className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
-            >
-              邀请码
-            </Link>
+            <>
+              <Link
+                href="/admin/users"
+                className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                用户管理
+              </Link>
+              <Link
+                href="/admin/invites"
+                className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                邀请码
+              </Link>
+            </>
           )}
           <button
             onClick={logout}

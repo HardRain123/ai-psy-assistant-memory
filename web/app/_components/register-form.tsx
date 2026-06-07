@@ -5,7 +5,7 @@ import { FormEvent, useState } from 'react'
 
 function stableRegisterError(status: number, fallback: string) {
   if (status === 400) return fallback || '注册信息有误，请检查后再试。'
-  if (status === 409) return fallback || '这个账号已经被注册，请换一个账号名。'
+  if (status === 409) return fallback || '账号或邮箱已经被注册，请换一个再试。'
   if (status === 401 || status === 403) return '邀请码不可用或已失效。'
   if (status >= 500) return '服务暂时不可用，请稍后再试。'
   return fallback || '注册失败，请稍后再试。'
@@ -15,6 +15,7 @@ export function RegisterForm() {
   const router = useRouter()
   const [inviteCode, setInviteCode] = useState('')
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -27,6 +28,10 @@ export function RegisterForm() {
 
     if (!inviteCode.trim()) {
       setError('请输入邀请码。')
+      return
+    }
+    if (!email.trim()) {
+      setError('请输入邮箱地址。')
       return
     }
     if (password !== confirmPassword) {
@@ -42,6 +47,7 @@ export function RegisterForm() {
         body: JSON.stringify({
           inviteCode: inviteCode.trim(),
           username: username.trim(),
+          email: email.trim(),
           password,
         }),
       })
@@ -86,6 +92,18 @@ export function RegisterForm() {
       </label>
 
       <label className="block text-sm font-medium text-zinc-700">
+        邮箱
+        <input
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          type="email"
+          className="mt-2 w-full rounded-lg border border-zinc-300 px-3 py-2 outline-none focus:ring-2 focus:ring-zinc-300"
+          autoComplete="email"
+          required
+        />
+      </label>
+
+      <label className="block text-sm font-medium text-zinc-700">
         密码
         <input
           value={password}
@@ -117,7 +135,7 @@ export function RegisterForm() {
 
       <button
         type="submit"
-        disabled={loading || !username.trim() || !password || !confirmPassword}
+        disabled={loading || !username.trim() || !email.trim() || !password || !confirmPassword}
         className="w-full rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-40"
       >
         {loading ? '注册中...' : '注册并进入聊天'}

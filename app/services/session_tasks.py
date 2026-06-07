@@ -294,7 +294,7 @@ def run_session_task_once(scan_limit: int = 20, fetch_limit: int = 5):
                     "session_id": task["session_id"],
                     "task_type": task["task_type"],
                     "status": "failed",
-                    "error": str(exc),
+                    "error": "session_task_failed",
                 }
             )
 

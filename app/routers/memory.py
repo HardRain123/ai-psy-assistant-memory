@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from app.db import transaction
+from app.errors import public_error
 from app.schemas import SaveMemoryRequest
 from app.services.quality import should_persist_memory
 from app.utils import clean_text, now_iso
@@ -48,7 +49,7 @@ def get_memory(user_id: str):
 
     except Exception as exc:
         logger.exception("get_memory_failed user_id=%s", user_id)
-        return {"success": False, "error": "get_memory_failed", "message": str(exc)}
+        return public_error("get_memory_failed")
 
 
 @router.post("/memory")
@@ -115,4 +116,4 @@ def save_memory(req: SaveMemoryRequest):
 
     except Exception as exc:
         logger.exception("save_memory_failed user_id=%s", req.user_id)
-        return {"success": False, "error": "save_memory_failed", "message": str(exc)}
+        return public_error("save_memory_failed")

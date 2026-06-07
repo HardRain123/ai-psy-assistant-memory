@@ -1,9 +1,11 @@
+import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.config import SESSION_MINUTES
 from app.db import transaction
+from app.errors import json_error, public_error
 from app.services.session_tasks import (
     run_session_task_once,
     scan_expired_sessions_and_create_tasks,
@@ -11,14 +13,16 @@ from app.services.session_tasks import (
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/debug/session-tasks/scan")
 def debug_scan_session_tasks():
     try:
         return scan_expired_sessions_and_create_tasks(limit=50)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        logger.exception("debug_scan_session_tasks_failed")
+        return json_error(500, "debug_operation_failed")
 
 
 @router.get("/debug/session-tasks/{user_id}")
@@ -58,16 +62,18 @@ def debug_get_session_tasks(user_id: str):
         ]
         return {"user_id": user_id, "tasks": tasks}
 
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        logger.exception("debug_get_session_tasks_failed user_id=%s", user_id)
+        return json_error(500, "debug_operation_failed")
 
 
 @router.post("/debug/session-tasks/run-once")
 def debug_run_session_tasks_once():
     try:
         return run_session_task_once(scan_limit=50, fetch_limit=10)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        logger.exception("debug_run_session_tasks_once_failed")
+        return json_error(500, "debug_operation_failed")
 
 
 @router.get("/session/deleted/{user_id}")
@@ -87,8 +93,9 @@ def delete_session(user_id: str):
 
         return {"success": True, "message": f"Deleted all session data for user {user_id}"}
 
-    except Exception as exc:
-        return {"success": False, "error": str(exc)}
+    except Exception:
+        logger.exception("debug_delete_session_failed user_id=%s", user_id)
+        return public_error("debug_operation_failed")
 
 
 @router.delete("/session-messages/{session_id}")
@@ -98,8 +105,9 @@ def delete_session_messages(session_id: str):
             cur.execute("DELETE FROM session_messages WHERE session_id = ?", (session_id,))
         return {"success": True, "message": f"Deleted all messages for session {session_id}"}
 
-    except Exception as exc:
-        return {"success": False, "error": str(exc)}
+    except Exception:
+        logger.exception("debug_delete_session_messages_failed session_id=%s", session_id)
+        return public_error("debug_operation_failed")
 
 
 @router.post("/debug/session/mark-latest-ended-yesterday/{user_id}")
@@ -161,8 +169,9 @@ def mark_latest_session_ended_yesterday(user_id: str):
                 "ended_at": new_ended_at.isoformat(),
                 "status": "ended",
             },
-            "message": "最近一次 session 已标记为昨天已结束。",
+            "message": "最近一次 session 已标记为昨天结束。",
         }
 
-    except Exception as exc:
-        return {"success": False, "error": str(exc)}
+    except Exception:
+        logger.exception("debug_mark_latest_session_ended_yesterday_failed user_id=%s", user_id)
+        return public_error("debug_operation_failed")

@@ -4,7 +4,8 @@ from fastapi import Depends, FastAPI
 
 from app.config import ENABLE_DEBUG_ENDPOINTS, TASK_WORKER_ENABLED
 from app.db import init_db, transaction
-from app.routers import auth, care_plan, context, handoff, health, memory, messages, profile, sessions, testing
+from app.errors import install_exception_handlers
+from app.routers import admin, auth, care_plan, context, dify, handoff, health, memory, messages, profile, screening, sessions, testing
 from app.security import require_backend_token
 from app.services.auth import bootstrap_admin
 from app.services.session_tasks import task_worker_loop
@@ -15,18 +16,22 @@ with transaction() as cur:
     bootstrap_admin(cur)
 
 app = FastAPI()
+install_exception_handlers(app)
 
 protected = [Depends(require_backend_token)]
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(admin.router)
 app.include_router(memory.router, dependencies=protected)
 app.include_router(sessions.router, dependencies=protected)
 app.include_router(context.router, dependencies=protected)
+app.include_router(dify.router, dependencies=protected)
 app.include_router(messages.router, dependencies=protected)
 app.include_router(profile.router, dependencies=protected)
 app.include_router(care_plan.router, dependencies=protected)
 app.include_router(handoff.router, dependencies=protected)
+app.include_router(screening.router, dependencies=protected)
 app.include_router(testing.router)
 
 if ENABLE_DEBUG_ENDPOINTS:

@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from app.db import transaction
+from app.errors import public_error
 from app.schemas import SaveCarePlanRequest
 from app.services.longitudinal import merge_care_plan
 from app.services.sessions import ensure_user
@@ -39,7 +40,7 @@ def get_care_plan(user_id: str):
 
     except Exception as exc:
         logger.exception("get_care_plan_failed user_id=%s", user_id)
-        return {"success": False, "error": "get_care_plan_failed", "message": str(exc)}
+        return public_error("get_care_plan_failed")
 
 
 @router.post("/care-plan")
@@ -80,4 +81,4 @@ def save_care_plan(req: SaveCarePlanRequest):
 
     except Exception as exc:
         logger.exception("save_care_plan_failed user_id=%s", req.user_id)
-        return {"success": False, "error": "save_care_plan_failed", "message": str(exc)}
+        return public_error("save_care_plan_failed")

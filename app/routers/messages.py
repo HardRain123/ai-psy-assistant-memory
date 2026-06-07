@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter
 
 from app.db import transaction
+from app.errors import public_error
 from app.schemas import SaveSessionMessageRequest, SaveSessionSummaryRequest
 from app.utils import clean_text, detect_risk_level, now_iso
 
@@ -55,7 +56,7 @@ def save_session_summary(req: SaveSessionSummaryRequest):
 
     except Exception as exc:
         logger.exception("save_session_summary_failed user_id=%s session_id=%s", req.user_id, req.session_id)
-        return {"success": False, "error": "save_session_summary_failed", "message": str(exc)}
+        return public_error("save_session_summary_failed")
 
 
 @router.post("/session-message")
@@ -102,7 +103,7 @@ def save_session_message(req: SaveSessionMessageRequest):
 
     except Exception as exc:
         logger.exception("save_session_message_failed user_id=%s session_id=%s", req.user_id, req.session_id)
-        return {"success": False, "error": "save_session_message_failed", "message": str(exc)}
+        return public_error("save_session_message_failed")
 
 
 @router.get("/session-transcript/{session_id}")
@@ -136,4 +137,4 @@ def get_session_transcript(session_id: str):
 
     except Exception as exc:
         logger.exception("get_session_transcript_failed session_id=%s", session_id)
-        return {"success": False, "error": "get_session_transcript_failed", "message": str(exc)}
+        return public_error("get_session_transcript_failed")

@@ -2,6 +2,7 @@ import logging
 import sqlite3
 import threading
 from contextlib import contextmanager
+from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from app.config import DATABASE_URL, IS_POSTGRES, LOG_LEVEL
@@ -110,8 +111,21 @@ def get_conn():
     conn = sqlite3.connect(sqlite_path, timeout=30)
     conn.execute("PRAGMA busy_timeout=30000;")
     conn.execute("PRAGMA foreign_keys=ON;")
-    if sqlite_path != ":memory:":
-        conn.execute("PRAGMA journal_mode=WAL;")
+    return CompatConnection(conn, False)
+
+
+def get_read_conn():
+    if IS_POSTGRES:
+        return get_conn()
+
+    sqlite_path = _sqlite_path_from_url(DATABASE_URL)
+    if sqlite_path == ":memory:":
+        conn = sqlite3.connect(sqlite_path, timeout=30)
+    else:
+        uri = Path(sqlite_path).resolve().as_uri() + "?mode=ro"
+        conn = sqlite3.connect(uri, timeout=5, uri=True)
+    conn.execute("PRAGMA busy_timeout=5000;")
+    conn.execute("PRAGMA foreign_keys=ON;")
     return CompatConnection(conn, False)
 
 
@@ -128,6 +142,22 @@ def transaction():
             raise
         finally:
             conn.close()
+
+
+@contextmanager
+def read_transaction():
+    conn = get_read_conn()
+    try:
+        cur = conn.cursor()
+        yield cur
+        if IS_POSTGRES:
+            conn.commit()
+    except Exception:
+        if IS_POSTGRES:
+            conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def _column_exists(cur, table: str, column: str) -> bool:
@@ -165,12 +195,92 @@ def _create_schema(cur):
             id {serial_pk},
             user_id TEXT NOT NULL UNIQUE,
             username TEXT,
+            email TEXT,
+            email_verified_at TEXT,
             password_hash TEXT,
             is_admin INTEGER NOT NULL DEFAULT 0,
             last_login_at TEXT,
             disabled_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+            request_ip_hash TEXT,
+            user_agent TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS email_verification_tokens (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+            request_ip_hash TEXT,
+            user_agent TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS email_outbox (
+            id {serial_pk},
+            message_type TEXT NOT NULL,
+            recipient_email TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            body_text TEXT NOT NULL,
+            body_html TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            attempt_count INTEGER NOT NULL DEFAULT 0,
+            last_error_type TEXT,
+            sent_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS account_security_events (
+            id {serial_pk},
+            event_type TEXT NOT NULL,
+            user_id TEXT,
+            email_hash TEXT,
+            ip_hash TEXT,
+            user_agent TEXT,
+            success INTEGER NOT NULL DEFAULT 0,
+            error TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS account_rate_limits (
+            id {serial_pk},
+            action TEXT NOT NULL,
+            email_hash TEXT,
+            ip_hash TEXT,
+            created_at TEXT NOT NULL
         )
         """
     )
@@ -204,6 +314,22 @@ def _create_schema(cur):
             last_seen_at TEXT NOT NULL,
             expires_at TEXT NOT NULL,
             revoked_at TEXT
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS admin_audit_logs (
+            id {serial_pk},
+            action TEXT NOT NULL,
+            actor_user_id TEXT,
+            target_user_id TEXT,
+            success INTEGER NOT NULL DEFAULT 0,
+            error TEXT,
+            ip_hash TEXT,
+            user_agent TEXT,
+            created_at TEXT NOT NULL
         )
         """
     )
@@ -366,9 +492,44 @@ def _create_schema(cur):
         """
     )
 
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS clinical_screenings (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            session_id TEXT DEFAULT '',
+            instrument TEXT NOT NULL,
+            score REAL NOT NULL,
+            severity TEXT NOT NULL,
+            label TEXT NOT NULL,
+            answers_json TEXT NOT NULL,
+            risk_level TEXT NOT NULL DEFAULT 'none',
+            risk_flags TEXT,
+            is_diagnosis INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS mental_state_snapshots (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            snapshot_json TEXT NOT NULL,
+            safety_level TEXT NOT NULL DEFAULT 'none',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
 
 def _migrate_existing_schema(cur):
     ensure_column(cur, "users", "username", "username TEXT")
+    ensure_column(cur, "users", "email", "email TEXT")
+    ensure_column(cur, "users", "email_verified_at", "email_verified_at TEXT")
     ensure_column(cur, "users", "password_hash", "password_hash TEXT")
     ensure_column(cur, "users", "is_admin", "is_admin INTEGER NOT NULL DEFAULT 0")
     ensure_column(cur, "users", "last_login_at", "last_login_at TEXT")
@@ -426,10 +587,22 @@ def _migrate_existing_schema(cur):
 
 def _create_indexes(cur):
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_invite_codes_hash ON invite_codes(code_hash)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_invite_codes_created ON invite_codes(created_at)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token_hash)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id, expires_at)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_token_hash ON password_reset_tokens(token_hash)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_password_reset_user_created ON password_reset_tokens(user_id, created_at)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_verification_token_hash ON email_verification_tokens(token_hash)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_email_verification_user_created ON email_verification_tokens(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_email_outbox_status ON email_outbox(status, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_account_security_events_user ON account_security_events(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_account_security_events_type ON account_security_events(event_type, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_account_rate_limits_action_email ON account_rate_limits(action, email_hash, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_account_rate_limits_action_ip ON account_rate_limits(action, ip_hash, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit_logs(created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_admin_audit_target ON admin_audit_logs(target_user_id, created_at)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions(user_id, started_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_open_auto_close ON sessions(status, auto_close_at)")
@@ -444,12 +617,19 @@ def _create_indexes(cur):
         ON handoff_documents(session_id, format, generated_by)
         """
     )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_screenings_user_created ON clinical_screenings(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_screenings_user_instrument ON clinical_screenings(user_id, instrument, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_screenings_user_id ON clinical_screenings(user_id, id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_user_created ON mental_state_snapshots(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_user_id ON mental_state_snapshots(user_id, id)")
 
 
 def init_db():
     with db_lock:
         conn = get_conn()
         try:
+            if not IS_POSTGRES and _sqlite_path_from_url(DATABASE_URL) != ":memory:":
+                conn.execute("PRAGMA journal_mode=WAL;")
             cur = conn.cursor()
             _create_schema(cur)
             _migrate_existing_schema(cur)
@@ -472,5 +652,11 @@ def check_db_health() -> dict:
             return {"ok": True, "backend": get_database_backend()}
         finally:
             conn.close()
-    except Exception as exc:
-        return {"ok": False, "backend": get_database_backend(), "error": str(exc)}
+    except Exception:
+        logger.exception("db_health_check_failed backend=%s", get_database_backend())
+        return {
+            "ok": False,
+            "backend": get_database_backend(),
+            "error": "db_health_failed",
+            "message": "数据库状态检查失败，请稍后再试。",
+        }

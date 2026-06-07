@@ -3,7 +3,8 @@ from datetime import datetime
 
 from fastapi import APIRouter
 
-from app.db import transaction
+from app.db import read_transaction, transaction
+from app.errors import public_error
 from app.schemas import FinalizeSessionRequest
 from app.services.sessions import (
     ENDED_STATUSES,
@@ -24,32 +25,34 @@ logger = logging.getLogger(__name__)
 @router.get("/session/status/{user_id}")
 def session_status(user_id: str):
     try:
-        with transaction() as cur:
+        with read_transaction() as cur:
             row = get_latest_session(cur, user_id)
 
-            if not row:
+        if not row:
+            with transaction() as cur:
                 return create_session(cur, user_id)
 
-            (
-                session_pk,
-                public_session_id,
-                _user_id,
-                started_at_str,
-                ended_at_str,
-                status,
-                final_saved_at,
-                auto_close_at,
-                stage,
-                summary,
-                risk_level,
-                is_low_content,
-                summary_type,
-                user_message_count,
-                user_char_count,
-            ) = row
-            session_id = public_session_id or session_pk
+        (
+            session_pk,
+            public_session_id,
+            _user_id,
+            started_at_str,
+            ended_at_str,
+            status,
+            final_saved_at,
+            auto_close_at,
+            stage,
+            summary,
+            risk_level,
+            is_low_content,
+            summary_type,
+            user_message_count,
+            user_char_count,
+        ) = row
+        session_id = public_session_id or session_pk
 
-            if status in ENDED_STATUSES:
+        if status in ENDED_STATUSES:
+            with read_transaction() as cur:
                 if has_session_today(cur, user_id):
                     return ended_status_response(
                         session_id=session_id,
@@ -58,14 +61,16 @@ def session_status(user_id: str):
                         final_saved_at=final_saved_at,
                         risk_level=risk_level,
                     )
+            with transaction() as cur:
                 return create_session(cur, user_id)
 
-            started_at = parse_dt(started_at_str)
-            today = datetime.now().date()
-            elapsed, remaining, current_stage = calc_stage(started_at)
-            auto_close_reached = bool(auto_close_at and parse_dt(auto_close_at) <= datetime.now())
+        started_at = parse_dt(started_at_str)
+        today = datetime.now().date()
+        elapsed, remaining, current_stage = calc_stage(started_at)
+        auto_close_reached = bool(auto_close_at and parse_dt(auto_close_at) <= datetime.now())
 
-            if started_at.date() < today:
+        if started_at.date() < today:
+            with transaction() as cur:
                 end_session_workflow(
                     cur,
                     session_id,
@@ -75,7 +80,8 @@ def session_status(user_id: str):
                 logger.info("previous_day_session_closed user_id=%s session_id=%s", user_id, session_id)
                 return create_session(cur, user_id)
 
-            if current_stage == "ended" or auto_close_reached:
+        if current_stage == "ended" or auto_close_reached:
+            with transaction() as cur:
                 result = end_session_workflow(
                     cur,
                     session_id,
@@ -92,15 +98,11 @@ def session_status(user_id: str):
                     elapsed_minutes=elapsed,
                 )
 
-            return active_status_response(row)
+        return active_status_response(row)
 
     except Exception as exc:
         logger.exception("session_status_failed user_id=%s", user_id)
-        return {
-            "success": False,
-            "error": "session_status_failed",
-            "message": str(exc),
-        }
+        return public_error("session_status_failed")
 
 
 @router.post("/session/start/{user_id}")
@@ -138,7 +140,7 @@ def start_session(user_id: str):
 
     except Exception as exc:
         logger.exception("start_session_failed user_id=%s", user_id)
-        return {"success": False, "error": "start_session_failed", "message": str(exc)}
+        return public_error("start_session_failed")
 
 
 @router.post("/session/finalize")
@@ -184,9 +186,4 @@ def finalize_session(req: FinalizeSessionRequest):
 
     except Exception as exc:
         logger.exception("finalize_session_failed user_id=%s", req.user_id)
-        return {
-            "success": False,
-            "error": "finalize_session_failed",
-            "message": str(exc),
-            "final_saved": False,
-        }
+        return public_error("finalize_session_failed", final_saved=False)

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SaveSessionMessageRequest(BaseModel):
@@ -29,6 +29,11 @@ class SaveSessionSummaryRequest(BaseModel):
     risk_level: str = "none"
 
 
+class DifyTurnPrepRequest(BaseModel):
+    user_id: str
+    query: str
+
+
 class FinalizeSessionRequest(BaseModel):
     user_id: str
     session_id: Optional[str] = None
@@ -47,6 +52,25 @@ class SaveMemoryRequest(BaseModel):
     should_persist: bool = True
 
 
+class ScreeningSubmitRequest(BaseModel):
+    user_id: str
+    answers: list[int]
+    session_id: Optional[str] = None
+
+
+class ScreeningBatchItem(BaseModel):
+    instrument: str
+    answers: list[int]
+    session_id: Optional[str] = None
+
+
+class ScreeningBatchRequest(BaseModel):
+    user_id: str
+    screenings: list[ScreeningBatchItem]
+    session_id: Optional[str] = None
+    supplements: dict[str, list[int]] = Field(default_factory=dict)
+
+
 class GenerateHandoffRequest(BaseModel):
     format: str = "markdown"
     regenerate: bool = False
@@ -59,6 +83,7 @@ class E2ETimeShiftRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     username: str
+    email: str
     password: str
     inviteCode: str
 
@@ -66,6 +91,28 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = ""
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str = ""
+    new_password: str = ""
+
+
+class EmailVerificationRequest(BaseModel):
+    email: str = ""
+
+
+class EmailVerificationConfirmRequest(BaseModel):
+    token: str = ""
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = ""
+    new_password: str = ""
 
 
 class SessionTokenRequest(BaseModel):

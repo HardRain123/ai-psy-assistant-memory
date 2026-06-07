@@ -4,7 +4,7 @@ app:
   icon_background: '#FFEAD5'
   icon_type: emoji
   mode: advanced-chat
-  name: 心理咨询师-v0.12
+  name: 心理咨询师-v0.15
   use_icon_as_answer_icon: false
 dependencies:
 - current_identifier: null
@@ -17,14 +17,14 @@ version: 0.6.0
 workflow:
   conversation_variables: []
   environment_variables:
-  - description: Shared token for protected backend HTTP requests.
-    id: env-backend-shared-token
+  - description: ''
+    id: bd9d47b8-7159-444d-ba44-712d1a04ba2a
     name: BACKEND_SHARED_TOKEN
     selector:
     - env
     - BACKEND_SHARED_TOKEN
-    value: ''
-    value_type: secret
+    value: dTDLHeK6pop+uRsJqX7Ew+B39FYWmFYNPLbD0/ufiYw=
+    value_type: string
   features:
     file_upload:
       allowed_file_extensions:
@@ -88,19 +88,6 @@ workflow:
       type: custom
       zIndex: 0
     - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: start
-        targetType: http-request
-      id: 1779204939074-source-1779293483544-target
-      selected: false
-      source: '1779204939074'
-      sourceHandle: source
-      target: '1779293483544'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
         isInLoop: false
         sourceType: http-request
         targetType: answer
@@ -133,70 +120,6 @@ workflow:
       source: '1779337410108'
       sourceHandle: 'false'
       target: '1779205697384'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: start
-        targetType: http-request
-      id: 1779204939074-source-1779348584268-target
-      selected: false
-      source: '1779204939074'
-      sourceHandle: source
-      target: '1779348584268'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: http-request
-        targetType: code
-      id: 1779348584268-source-1779349355740-target
-      selected: false
-      source: '1779348584268'
-      sourceHandle: source
-      target: '1779349355740'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: http-request
-        targetType: code
-      id: 1779293483544-source-1779716715273-target
-      selected: false
-      source: '1779293483544'
-      sourceHandle: source
-      target: '1779716715273'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: code
-        targetType: llm
-      id: 1779716715273-source-llm-target
-      selected: false
-      source: '1779716715273'
-      sourceHandle: source
-      target: llm
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: code
-        targetType: http-request
-      id: 1779349355740-source-1779717555576-target
-      selected: false
-      source: '1779349355740'
-      sourceHandle: source
-      target: '1779717555576'
       targetHandle: target
       type: custom
       zIndex: 0
@@ -290,18 +213,6 @@ workflow:
       zIndex: 0
     - data:
         isInLoop: false
-        sourceType: http-request
-        targetType: code
-      id: 17798742768870-source-17798742810070-target
-      selected: false
-      source: '17798742768870'
-      sourceHandle: source
-      target: '17798742810070'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
         sourceType: if-else
         targetType: llm
       id: 1779708958307-false-1779205480903-target
@@ -372,43 +283,6 @@ workflow:
       source: '1779940110651'
       sourceHandle: source
       target: '1779337410108'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: http-request
-        targetType: code
-      id: 1779963128615-source-1779963168931-target
-      selected: false
-      source: '1779963128615'
-      sourceHandle: source
-      target: '1779963168931'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: code
-        targetType: if-else
-      id: 1779963168931-source-1779939911254-target
-      selected: false
-      source: '1779963168931'
-      sourceHandle: source
-      target: '1779939911254'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: llm
-        targetType: http-request
-      id: 1779205391389-source-1779963128615-target
-      selected: false
-      source: '1779205391389'
-      sourceHandle: source
-      target: '1779963128615'
       targetHandle: target
       type: custom
       zIndex: 0
@@ -598,10 +472,33 @@ workflow:
       zIndex: 0
     - data:
         isInLoop: false
+        sourceType: start
+        targetType: http-request
+      id: 1779204939074-source-1780825750403-target
+      source: '1779204939074'
+      sourceHandle: source
+      target: '1780825750403'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInIteration: false
+        isInLoop: false
         sourceType: http-request
+        targetType: code
+      id: 1780825750403-source-1780825876878-target
+      source: '1780825750403'
+      sourceHandle: source
+      target: '1780825876878'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: code
         targetType: llm
-      id: 1779717555576-source-llm-target
-      source: '1779717555576'
+      id: 1780825876878-source-llm-target
+      source: '1780825876878'
       sourceHandle: source
       target: llm
       targetHandle: target
@@ -609,12 +506,12 @@ workflow:
       zIndex: 0
     - data:
         isInLoop: false
-        sourceType: code
-        targetType: http-request
-      id: 1779872124969-source-17798742768870-target
-      source: '1779872124969'
+        sourceType: llm
+        targetType: if-else
+      id: 1779205391389-source-1779939911254-target
+      source: '1779205391389'
       sourceHandle: source
-      target: '17798742768870'
+      target: '1779939911254'
       targetHandle: target
       type: custom
       zIndex: 0
@@ -622,8 +519,8 @@ workflow:
         isInLoop: false
         sourceType: code
         targetType: llm
-      id: 17798742810070-source-1779205391389-target
-      source: '17798742810070'
+      id: 1779872124969-source-1779205391389-target
+      source: '1779872124969'
       sourceHandle: source
       target: '1779205391389'
       targetHandle: target
@@ -648,10 +545,10 @@ workflow:
       id: '1779204939074'
       position:
         x: 0
-        y: 295.38571428571424
+        y: 4.166666666666629
       positionAbsolute:
         x: 0
-        y: 295.38571428571424
+        y: 4.166666666666629
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -679,7 +576,7 @@ workflow:
           role: system
           text: "你是风险分类器，不是咨询师。\n\n你只做一件事：根据用户当前输入和最近上下文判断风险等级。\n\n必须只输出 JSON。\n禁止输出解释。\n\
             禁止输出安慰。\n禁止输出给用户看的话。\n禁止输出 Markdown。\n禁止输出代码块。\n禁止输出“我是风险识别模型”。\n\n# 输入\n\
-            \n用户当前输入：\n{{#sys.query#}}\n\n最近上下文：\n{{#1779716715273.context_text#}}\n\
+            \n用户当前输入：\n{{#sys.query#}}\n\n最近上下文：\n{{#1780825876878.context_text#}}\n\
             \n# 风险等级\n\nlow：\n没有自伤、自杀、伤害他人、极端绝望表达。\n用户只是表达烦、累、压力大、任务没意义、计划没意义、建议没用，默认不属于安全风险，除非明确指向生命、自伤、自杀或伤害他人。\n\
             \nmedium：\n出现生命意义、自我存在、活着、不想存在、想消失、撑不下去等相关表达，但没有具体计划、方式、准备行为或正在实施风险。\n\
             \nhigh：\n出现自伤、自杀、伤害他人的具体想法、计划、方式、准备行为，或正在实施风险。\n\n# 判断规则\n\n1. 当前输入优先。\n\
@@ -699,11 +596,11 @@ workflow:
       height: 89
       id: llm
       position:
-        x: 1102.038417424358
-        y: 208.03571428571428
+        x: 1029
+        y: 67.66666666666674
       positionAbsolute:
-        x: 1102.038417424358
-        y: 208.03571428571428
+        x: 1029
+        y: 67.66666666666674
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -723,8 +620,8 @@ workflow:
           role: system
           text: "你是心理咨询助手的内部分析模块，不是最终回复模块。\n\n你的任务是根据用户当前输入，给 Therapy Response 提供简短、谨慎、可用的内部判断。\n\
             \n你不能诊断。\n不能贴人格标签。\n不能使用强解释。\n不能把假设写成事实。\n不能输出给用户看的话。\n\n# 输入\n\n用户当前输入：\n\
-            {{#sys.query#}}\n\n最近上下文：\n{{#1779716715273.context_text#}}\n\n本次 session\
-            \ 对话：\n{{#17798742810070.transcript_text#}}\n\n# 输入类型判断\n\n请判断用户当前输入属于以下哪一类：\n\
+            {{#sys.query#}}\n\n最近上下文：\n{{#1780825876878.context_text#}}\n\n本次 session\
+            \ 对话：\n{{#1780825876878.transcript_text#}}\n\n# 输入类型判断\n\n请判断用户当前输入属于以下哪一类：\n\
             \nA. 模糊情绪输入：\n用户只表达模糊情绪或状态，没有具体事件。\n\nB. 现实卡点输入：\n用户已经说出具体问题、任务、关系、身体状态或现实压力。\n\
             \nC. 互动修复输入：\n用户明确质疑 Agent、指出理解错误、问得不合适、跳跃、记错或听不懂。\n\nD. 安全风险输入：\n用户表达生命意义、自伤、自杀、伤害他人等风险相关内容。\n\
             \nE. 行动复盘输入：\n用户反馈任务没做成、做不到、只做一点、连续做了几天、有小幅推进。\n\nF. 阶段总结输入：\n用户要求总结、计划、下一步，或表达阶段结束。\n\
@@ -746,11 +643,11 @@ workflow:
       height: 89
       id: '1779205391389'
       position:
-        x: 1750
-        y: 248.81904761904764
+        x: 1715
+        y: 91.33333333333337
       positionAbsolute:
-        x: 1750
-        y: 248.81904761904764
+        x: 1715
+        y: 91.33333333333337
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -792,17 +689,17 @@ workflow:
 
             1. 用户当前输入：{{#sys.query#}}
 
-            2. 当前 session transcript：{{#17798742810070.transcript_text#}}
+            2. 当前 session transcript：{{#1780825876878.transcript_text#}}
 
             3. 风险识别：risk_level={{#1779872124969.risk_level#}}，need_safety_check={{#1779872124969.need_safety_check#}}，risk_reason={{#1779872124969.reason#}}
 
-            4. session 阶段：{{#1779349355740.session_stage#}}
+            4. session 阶段：{{#1780825876878.session_stage#}}
 
-            5. 剩余时间：{{#1779349355740.remaining_minutes#}}
+            5. 剩余时间：{{#1780825876878.remaining_minutes#}}
 
-            6. 滚动咨询计划表：{{#1779963168931.plan_text#}}
+            6. 滚动咨询计划表：{{#1780825876878.plan_text#}}
 
-            7. 历史上下文：{{#1779716715273.context_text#}}
+            7. 历史上下文：{{#1780825876878.context_text#}}
 
 
             如果历史上下文、care plan、滚动计划和当前用户输入冲突，以当前用户输入为准。
@@ -947,8 +844,6 @@ workflow:
             推荐策略：
 
             - 立刻停止推进原议题。
-            - 暂停原议题，先处理当前关系反馈。
-            - 先修复关系，再决定是否回到原议题。
 
             - 承认刚才可能理解偏了、问跳了、问得太细或带入了不属于当前的话题。
 
@@ -1122,14 +1017,6 @@ workflow:
 
             - 不把历史计划强行覆盖当前表达。
 
-            纵向咨询事件回应原则：
-
-            - 当用户反馈任务未完成时，把它当作计划反馈来下调任务。
-
-            - 当用户表达连续几天或多次完成小动作时，先确认连续行动，再轻微连接到下一步。
-
-            - 当用户表达总结、阶段结束、下一阶段或交接时，优先做阶段性整理和交接。
-
 
             ## G. 普通探索输入
 
@@ -1272,11 +1159,11 @@ workflow:
       height: 89
       id: '1779205480903'
       position:
-        x: 4224
-        y: 749.1190476190476
+        x: 3470
+        y: 891.8142857142857
       positionAbsolute:
-        x: 4224
-        y: 749.1190476190476
+        x: 3470
+        y: 891.8142857142857
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1297,16 +1184,16 @@ workflow:
           text: "你是长期记忆整理模块，不是心理分析报告生成器。\n\n你的任务是：判断本轮对话是否值得写入长期记忆。\n\n只返回 JSON。\n\
             不要解释。\n不要 Markdown。\n不要代码块。\n\n# 输入信息\n\n用户当前输入：\n{{#sys.query#}}\n\n\
             心理分析：\n{{#1779205391389.text#}}\n\n助手回复：\n{{#1779205480903.text#}}\n\n\
-            已有长期记忆：\n{{#1779293483544.body#}}\n\n# 重要原则\n\n长期记忆只能来自用户明确表达过的内容。\n助手回复只能辅助判断，不得作为长期记忆事实来源。\n\
-            不要把助手建议、助手总结、助手推测写成用户记忆。\n不要保存一次性情绪。\n不要保存寒暄。\n不要保存空泛总结。\n不要保存诊断标签。\n\
-            不要保存没有证据的心理解释。\n不要保存具体话术。\n不要保存用户未确认、未接受、未尝试的计划。\n\n# 值得保存的内容\n\n只有以下内容才值得保存：\n\
-            \n1. 用户长期反复出现的困扰。\n2. 用户稳定的情绪模式或行为模式。\n3. 用户重要的关系、经历、压力来源。\n4. 用户明确提到的长期目标。\n\
-            5. 用户明确表达的咨询偏好或反感点。\n6. 下次咨询需要接续的重点。\n7. 用户对行动计划的明确反馈。\n8. 用户出现的连续行动、阶段性进展或稳定变化。\n\
-            9. 用户明确表达的风险信息或安全确认结果。\n\n# 不要保存\n\n1. 寒暄。\n2. 临时情绪。\n3. 助手说过的话。\n4. 空泛总结。\n\
-            5. 诊断标签。\n6. 没有新信息的重复内容。\n7. 低内容 session。\n8. “用户主要表达为：你好”这类无意义总结。\n9.\
-            \ 防御、创伤、测试咨询师、完美主义、深层动机、潜意识、人格问题等无证据强解释标签。\n10. 用户没有确认过的计划。\n11. 只出现一次、没有长期意义的具体细节。\n\
-            \n# 判断规则\n\n如果用户本轮只是说“你好”“嗯”“不知道”“继续”等，没有提供新的有效信息，则返回：\n\n{\n  \"should_save\"\
-            : false,\n  \"memory\": \"\"\n}\n\n如果用户提供了具体困扰、具体场景、长期模式、重要感受、行动反馈、风险信息或咨询偏好，则可以返回\
+            已有长期记忆：\n{{#1780825876878.context_text#}}\n\n# 重要原则\n\n长期记忆只能来自用户明确表达过的内容。\n\
+            助手回复只能辅助判断，不得作为长期记忆事实来源。\n不要把助手建议、助手总结、助手推测写成用户记忆。\n不要保存一次性情绪。\n不要保存寒暄。\n\
+            不要保存空泛总结。\n不要保存诊断标签。\n不要保存没有证据的心理解释。\n不要保存具体话术。\n不要保存用户未确认、未接受、未尝试的计划。\n\
+            \n# 值得保存的内容\n\n只有以下内容才值得保存：\n\n1. 用户长期反复出现的困扰。\n2. 用户稳定的情绪模式或行为模式。\n3.\
+            \ 用户重要的关系、经历、压力来源。\n4. 用户明确提到的长期目标。\n5. 用户明确表达的咨询偏好或反感点。\n6. 下次咨询需要接续的重点。\n\
+            7. 用户对行动计划的明确反馈。\n8. 用户出现的连续行动、阶段性进展或稳定变化。\n9. 用户明确表达的风险信息或安全确认结果。\n\n\
+            # 不要保存\n\n1. 寒暄。\n2. 临时情绪。\n3. 助手说过的话。\n4. 空泛总结。\n5. 诊断标签。\n6. 没有新信息的重复内容。\n\
+            7. 低内容 session。\n8. “用户主要表达为：你好”这类无意义总结。\n9. 防御、创伤、测试咨询师、完美主义、深层动机、潜意识、人格问题等无证据强解释标签。\n\
+            10. 用户没有确认过的计划。\n11. 只出现一次、没有长期意义的具体细节。\n\n# 判断规则\n\n如果用户本轮只是说“你好”“嗯”“不知道”“继续”等，没有提供新的有效信息，则返回：\n\
+            \n{\n  \"should_save\": false,\n  \"memory\": \"\"\n}\n\n如果用户提供了具体困扰、具体场景、长期模式、重要感受、行动反馈、风险信息或咨询偏好，则可以返回\
             \ should_save = true。\n\n写入 memory 时只写可观察事实。\n如果只是推测，should_save=false。\n\
             \n# 返回格式\n\n必须严格返回以下 JSON 之一：\n\n{\n  \"should_save\": true,\n  \"memory\"\
             : \"100字以内的长期记忆\"\n}\n\n或者：\n\n{\n  \"should_save\": false,\n  \"memory\"\
@@ -1319,11 +1206,11 @@ workflow:
       height: 89
       id: '1779205673504'
       position:
-        x: 4586
-        y: 643.85
+        x: 3833
+        y: 808.6142857142856
       positionAbsolute:
-        x: 4586
-        y: 643.85
+        x: 3833
+        y: 808.6142857142856
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1338,49 +1225,12 @@ workflow:
       height: 103
       id: '1779205697384'
       position:
-        x: 5994
-        y: 701.5
+        x: 5245
+        y: 867.9976190476191
       positionAbsolute:
-        x: 5994
-        y: 701.5
+        x: 5245
+        y: 867.9976190476191
       selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        authorization:
-          config: null
-          type: no-auth
-        body:
-          data: []
-          type: none
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
-        method: get
-        params: ''
-        retry_config:
-          max_retries: 3
-          retry_enabled: true
-          retry_interval: 100
-        selected: false
-        ssl_verify: true
-        timeout:
-          max_connect_timeout: 0
-          max_read_timeout: 0
-          max_write_timeout: 0
-        title: HTTP 请求：读取记忆
-        type: http-request
-        url: https://ai-assistant-psy-mvp.619569391.workers.dev/context/{{#1779204939074.user_id#}}
-        variables: []
-      height: 158
-      id: '1779293483544'
-      position:
-        x: 362
-        y: 171.98571428571427
-      positionAbsolute:
-        x: 362
-        y: 171.98571428571427
-      selected: true
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -1397,7 +1247,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"memory\"\
               : \"{{#1779940110651.memory#}}\"\n}"
           type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         method: post
         params: ''
         retry_config:
@@ -1417,11 +1267,11 @@ workflow:
       height: 155
       id: '1779293818389'
       position:
-        x: 5632
-        y: 600
+        x: 4882
+        y: 765.3309523809523
       positionAbsolute:
-        x: 5632
-        y: 600
+        x: 4882
+        y: 765.3309523809523
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1446,115 +1296,11 @@ workflow:
       height: 149
       id: '1779337410108'
       position:
-        x: 5270
-        y: 636.85
+        x: 4519
+        y: 802.2809523809524
       positionAbsolute:
-        x: 5270
-        y: 636.85
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        authorization:
-          config: null
-          type: no-auth
-        body:
-          data: []
-          type: none
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
-        method: get
-        params: ''
-        retry_config:
-          max_retries: 3
-          retry_enabled: true
-          retry_interval: 100
-        selected: false
-        ssl_verify: true
-        timeout:
-          max_connect_timeout: 0
-          max_read_timeout: 0
-          max_write_timeout: 0
-        title: 查询用户状态
-        type: http-request
-        url: https://ai-assistant-psy-mvp.619569391.workers.dev/session/status/{{#1779204939074.user_id#}}
-        variables: []
-      height: 174
-      id: '1779348584268'
-      position:
-        x: 362
-        y: 404.35586225565146
-      positionAbsolute:
-        x: 362
-        y: 404.35586225565146
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        code: "import json\n\ndef main(body: str) -> dict:\n    # Dify HTTP 节点传进来的\
-          \ body 可能是字符串\n    if isinstance(body, str):\n        data = json.loads(body)\n\
-          \    else:\n        data = body\n\n    return {\n        \"session_id\"\
-          : data.get(\"session_id\"),\n        \"session_stage\": data.get(\"session_stage\"\
-          ) or data.get(\"stage\", \"\"),\n        \"can_continue\": data.get(\"can_continue\"\
-          , False),\n        \"can_start_new_session\": data.get(\"can_start_new_session\"\
-          , False),\n        \"daily_limit_reached\": data.get(\"daily_limit_reached\"\
-          , False),\n        \"remaining_minutes\": data.get(\"remaining_minutes\"\
-          , 0),\n        \"is_new_session\": data.get(\"is_new_session\", False),\n\
-          \        \"is_new_session_str\": data.get(\"is_new_session_str\",False),\n\
-          \        \"message\": data.get(\"message\", \"\"),\n        \"final_saved\"\
-          : data.get(\"final_saved\",False)\n    }"
-        code_language: python3
-        outputs:
-          can_continue:
-            children: null
-            type: boolean
-          can_start_new_session:
-            children: null
-            type: boolean
-          daily_limit_reached:
-            children: null
-            type: boolean
-          final_saved:
-            children: null
-            type: boolean
-          is_new_session:
-            children: null
-            type: boolean
-          is_new_session_str:
-            children: null
-            type: string
-          message:
-            children: null
-            type: string
-          remaining_minutes:
-            children: null
-            type: number
-          session_id:
-            children: null
-            type: string
-          session_stage:
-            children: null
-            type: string
-        selected: false
-        title: 代码执行
-        type: code
-        variables:
-        - value_selector:
-          - '1779348584268'
-          - body
-          value_type: string
-          variable: body
-      height: 53
-      id: '1779349355740'
-      position:
-        x: 671.565423759733
-        y: 487.0357142857143
-      positionAbsolute:
-        x: 671.565423759733
-        y: 487.0357142857143
+        x: 4519
+        y: 802.2809523809524
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1622,17 +1368,17 @@ workflow:
 
             session_stage:
 
-            {{#1779349355740.session_stage#}}
+            {{#1780825876878.session_stage#}}
 
 
             remaining_minutes:
 
-            {{#1779349355740.remaining_minutes#}}
+            {{#1780825876878.remaining_minutes#}}
 
 
             用户长期记忆：
 
-            {{#1779716715273.context_text#}}
+            {{#1780825876878.context_text#}}
 
 
             当前心理分析：
@@ -1657,7 +1403,7 @@ workflow:
 
             本次咨询到目前为止的对话：
 
-            {{#17798742810070.transcript_text#}}
+            {{#1780825876878.transcript_text#}}
 
 
             # 优先级
@@ -1805,11 +1551,11 @@ workflow:
       height: 89
       id: '1779708919320'
       position:
-        x: 4275.644498401773
-        y: 378.0758105349609
+        x: 3470
+        y: 424.6880952380953
       positionAbsolute:
-        x: 4275.644498401773
-        y: 378.0758105349609
+        x: 3470
+        y: 424.6880952380953
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1824,7 +1570,7 @@ workflow:
             value: true
             varType: boolean
             variable_selector:
-            - '1779349355740'
+            - '1780825876878'
             - final_saved
           id: 'true'
           logical_operator: or
@@ -1835,7 +1581,7 @@ workflow:
             value: false
             varType: boolean
             variable_selector:
-            - '1779349355740'
+            - '1780825876878'
             - can_continue
           - comparison_operator: is
             id: d456f82a-c9d2-4dfc-9b3d-d5c579eb9c42
@@ -1852,11 +1598,11 @@ workflow:
       height: 271
       id: '1779708958307'
       position:
-        x: 3862
-        y: 422.5357142857143
+        x: 3107
+        y: 337.73333333333335
       positionAbsolute:
-        x: 3862
-        y: 422.5357142857143
+        x: 3107
+        y: 337.73333333333335
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1871,11 +1617,11 @@ workflow:
       height: 103
       id: '1779709370734'
       position:
-        x: 5954
-        y: 51
+        x: 5205
+        y: 211.16428571428582
       positionAbsolute:
-        x: 5954
-        y: 51
+        x: 5205
+        y: 211.16428571428582
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1895,7 +1641,7 @@ workflow:
         - id: 2cd99dd8-3ecd-4248-8cc4-6c24182c1a23
           role: system
           text: "你是心理咨询会话总结模块。\n\n请根据本次咨询的完整对话，生成一份给系统使用的会话总结。\n\n# 输入\n\n本次完整对话：\n\
-            {{#17798742810070.transcript_text#}}\n\n# 低内容 session 过滤\n\n如果用户有效消息少于\
+            {{#1780825876878.transcript_text#}}\n\n# 低内容 session 过滤\n\n如果用户有效消息少于\
             \ 2 条，或总字数少于 20 个中文字符，或只说“你好 / 在吗 / 嗯 / 好 / 随便”等寒暄，或没有具体困扰、事件、情绪、行为、计划、风险表达，则返回\
             \ summary_type=low_content，并且 summary 只写：\n\n本次会话内容不足，未生成正式咨询总结。\n\n#\
             \ 总结要求\n\n1. 只总结用户真实表达过的内容。\n2. 不做诊断。\n3. 不加入用户没说过的强解释。\n4. 区分事实观察和待验证假设。\n\
@@ -1916,98 +1662,11 @@ workflow:
       height: 89
       id: '1779710237289'
       position:
-        x: 4908
-        y: 303.92857142857144
+        x: 4156
+        y: 465.3547619047619
       positionAbsolute:
-        x: 4908
-        y: 303.92857142857144
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        code: "import json\n\ndef main(body: str) -> dict:\n    if isinstance(body,\
-          \ str):\n        data = json.loads(body)\n    else:\n        data = body\n\
-          \n    return {\n        \"context_text\": data.get(\"context_text\", \"\
-          暂无历史上下文。\"),\n        \"profile_memory\": data.get(\"profile_memory\", \"\
-          \"),\n        \"recent_session_summaries\": data.get(\"recent_session_summaries\"\
-          , \"\"),\n        \"recent_memories\": data.get(\"recent_memories\", \"\"\
-          )\n    }"
-        code_language: python3
-        outputs:
-          context_text:
-            children: null
-            type: string
-          profile_memory:
-            children: null
-            type: string
-          recent_memories:
-            children: null
-            type: string
-          recent_session_summaries:
-            children: null
-            type: string
-        selected: false
-        title: memory parse
-        type: code
-        variables:
-        - value_selector:
-          - '1779293483544'
-          - body
-          value_type: string
-          variable: body
-      height: 53
-      id: '1779716715273'
-      position:
-        x: 704
-        y: 249.81904761904764
-      positionAbsolute:
-        x: 704
-        y: 249.81904761904764
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        authorization:
-          config: null
-          type: no-auth
-        body:
-          data:
-          - id: key-value-453
-            key: ''
-            type: text
-            value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"user\",\n  \"content\"\
-              : \"{{#sys.query#}}\"\n}"
-          type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
-        method: post
-        params: ''
-        retry_config:
-          max_retries: 3
-          retry_enabled: true
-          retry_interval: 100
-        selected: false
-        ssl_verify: true
-        timeout:
-          max_connect_timeout: 0
-          max_read_timeout: 0
-          max_write_timeout: 0
-        title: 保存用户对话
-        type: http-request
-        url: https://ai-assistant-psy-mvp.619569391.workers.dev/session-message
-        variables: []
-      height: 155
-      id: '1779717555576'
-      position:
-        x: 968.6962712791992
-        y: 459.78571428571433
-      positionAbsolute:
-        x: 968.6962712791992
-        y: 459.78571428571433
+        x: 4156
+        y: 465.3547619047619
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2023,10 +1682,10 @@ workflow:
             key: ''
             type: text
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"assistant\",\n\
+              : \"{{#1780825876878.session_id#}}\",\n  \"role\": \"assistant\",\n\
               \  \"content\": \"{{#1779205480903.text#}}\"\n}"
           type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         method: post
         params: ''
         retry_config:
@@ -2046,11 +1705,11 @@ workflow:
       height: 155
       id: '1779717724768'
       position:
-        x: 4586
-        y: 810.85
+        x: 3833
+        y: 977.6142857142856
       positionAbsolute:
-        x: 4586
-        y: 810.85
+        x: 3833
+        y: 977.6142857142856
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2066,11 +1725,11 @@ workflow:
             key: ''
             type: text
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"assistant\",\n\
+              : \"{{#1780825876878.session_id#}}\",\n  \"role\": \"assistant\",\n\
               \  \"content\": \"{{#1779708919320.text#}}\"\n}"
           type: json
         desc: ''
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         isInIteration: false
         isInLoop: false
         method: post
@@ -2092,11 +1751,11 @@ workflow:
       height: 155
       id: '17797178098120'
       position:
-        x: 4566
-        y: 245.42857142857144
+        x: 3813
+        y: 406.5214285714286
       positionAbsolute:
-        x: 4566
-        y: 245.42857142857144
+        x: 3813
+        y: 406.5214285714286
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2112,11 +1771,11 @@ workflow:
             key: ''
             type: text
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\",\n  \"summary\": \"{{#1779718251824.summary#}}\"\
+              : \"{{#1780825876878.session_id#}}\",\n  \"summary\": \"{{#1779718251824.summary#}}\"\
               ,\n  \"core_topics\": \"{{#1779718251824.core_topics#}}\",\n  \"next_focus\"\
               : \"{{#1779718251824.next_focus#}}\"\n}"
           type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         method: post
         params: ''
         retry_config:
@@ -2136,11 +1795,11 @@ workflow:
       height: 155
       id: '1779718060113'
       position:
-        x: 5612
-        y: 0
+        x: 4862
+        y: 159.33095238095245
       positionAbsolute:
-        x: 5612
-        y: 0
+        x: 4862
+        y: 159.33095238095245
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2192,11 +1851,11 @@ workflow:
       height: 53
       id: '1779718251824'
       position:
-        x: 5250
-        y: 336.42857142857144
+        x: 4499
+        y: 498.1880952380953
       positionAbsolute:
-        x: 5250
-        y: 336.42857142857144
+        x: 4499
+        y: 498.1880952380953
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2256,7 +1915,7 @@ workflow:
 
             旧的长期画像：
 
-            {{#1779716715273.profile_memory#}}
+            {{#1780825876878.profile_memory#}}
 
 
             本次咨询总结：
@@ -2283,11 +1942,11 @@ workflow:
       height: 89
       id: '1779868007113'
       position:
-        x: 5612
-        y: 233
+        x: 4862
+        y: 394.33095238095245
       positionAbsolute:
-        x: 5612
-        y: 233
+        x: 4862
+        y: 394.33095238095245
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2305,7 +1964,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"profile_memory\"\
               : \"{{#1780038042537.profile_memory#}}\"\n}"
           type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         method: post
         params: ''
         retry_config:
@@ -2325,11 +1984,11 @@ workflow:
       height: 155
       id: '1779868231767'
       position:
-        x: 6863.714285714285
-        y: 191.21904761904761
+        x: 6234
+        y: 431.6642857142857
       positionAbsolute:
-        x: 6863.714285714285
-        y: 191.21904761904761
+        x: 6234
+        y: 431.6642857142857
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2376,110 +2035,11 @@ workflow:
       height: 53
       id: '1779872124969'
       position:
-        x: 1351.5398127018393
-        y: 240.53571428571428
+        x: 1372
+        y: 100.5
       positionAbsolute:
-        x: 1351.5398127018393
-        y: 240.53571428571428
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        authorization:
-          config: null
-          type: no-auth
-        body:
-          data: []
-          type: none
-        desc: ''
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
-        isInIteration: false
-        isInLoop: false
-        method: get
-        params: ''
-        retry_config:
-          max_retries: 3
-          retry_enabled: true
-          retry_interval: 100
-        selected: false
-        ssl_verify: true
-        timeout:
-          max_connect_timeout: 0
-          max_read_timeout: 0
-          max_write_timeout: 0
-        title: 当前对话记录 (1)
-        type: http-request
-        url: https://ai-assistant-psy-mvp.619569391.workers.dev/session-transcript/{{#1779349355740.session_id#}}
-        variables: []
-      height: 174
-      id: '17798742768870'
-      position:
-        x: 1268.701032270026
-        y: -40.23334149757184
-      positionAbsolute:
-        x: 1268.701032270026
-        y: -40.23334149757184
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        code: "import json\n\ndef main(body: str) -> dict:\n    if not body:\n   \
-          \     return {\n            \"transcript_text\": \"\",\n            \"message_count\"\
-          : 0,\n            \"has_transcript\": False\n        }\n\n    # Dify HTTP\
-          \ 节点传进来的 body 通常是 JSON 字符串\n    if isinstance(body, str):\n        try:\n\
-          \            data = json.loads(body)\n        except Exception:\n      \
-          \      return {\n                \"transcript_text\": \"\",\n          \
-          \      \"message_count\": 0,\n                \"has_transcript\": False\n\
-          \            }\n    else:\n        data = body\n\n    transcript_text =\
-          \ data.get(\"transcript_text\", \"\")\n    messages = data.get(\"messages\"\
-          , [])\n\n    # 兜底：如果后端没有返回 transcript_text，就从 messages 拼\n    if not transcript_text\
-          \ and isinstance(messages, list):\n        lines = []\n\n        for msg\
-          \ in messages:\n            role = msg.get(\"role\", \"\")\n           \
-          \ content = msg.get(\"content\", \"\")\n\n            if not content:\n\
-          \                continue\n\n            if role == \"user\":\n        \
-          \        role_name = \"用户\"\n            elif role == \"assistant\":\n \
-          \               role_name = \"咨询师\"\n            else:\n               \
-          \ role_name = role or \"未知\"\n\n            lines.append(f\"{role_name}：{content}\"\
-          )\n\n        transcript_text = \"\\n\".join(lines)\n\n    transcript_text\
-          \ = transcript_text.strip()\n\n    return {\n        \"transcript_text\"\
-          : transcript_text,\n        \"message_count\": len(messages) if isinstance(messages,\
-          \ list) else 0,\n        \"has_transcript\": bool(transcript_text)\n   \
-          \ }"
-        code_language: python3
-        desc: ''
-        isInIteration: false
-        isInLoop: false
-        outputs:
-          has_transcript:
-            children: null
-            type: boolean
-          message_count:
-            children: null
-            type: number
-          transcript_text:
-            children: null
-            type: string
-        selected: false
-        title: Transcript parse (3)
-        type: code
-        variables:
-        - value_selector:
-          - '17798742768870'
-          - body
-          value_type: string
-          variable: body
-      height: 53
-      id: '17798742810070'
-      position:
-        x: 1686.3817088611777
-        y: 5.351337929146737
-      positionAbsolute:
-        x: 1686.3817088611777
-        y: 5.351337929146737
+        x: 1372
+        y: 100.5
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2504,11 +2064,11 @@ workflow:
       height: 149
       id: '1779939911254'
       position:
-        x: 2816
-        y: 271.88571428571424
+        x: 2058
+        y: 76.16666666666674
       positionAbsolute:
-        x: 2816
-        y: 271.88571428571424
+        x: 2058
+        y: 76.16666666666674
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2566,7 +2126,7 @@ workflow:
 
             本次对话记录：
 
-            {{#17798742810070.transcript_text#}}'
+            {{#1780825876878.transcript_text#}}'
         selected: false
         title: Crisis Safety Response
         type: llm
@@ -2575,11 +2135,11 @@ workflow:
       height: 89
       id: '1779939946740'
       position:
-        x: 3178
-        y: 208.03571428571428
+        x: 2421
+        y: 121.06666666666666
       positionAbsolute:
-        x: 3178
-        y: 208.03571428571428
+        x: 2421
+        y: 121.06666666666666
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2595,11 +2155,11 @@ workflow:
             key: ''
             type: text
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"assistant\",\n\
+              : \"{{#1780825876878.session_id#}}\",\n  \"role\": \"assistant\",\n\
               \  \"content\": \"{{#1779939946740.text#}}\"\n}"
           type: json
         desc: ''
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         isInIteration: false
         isInLoop: false
         method: post
@@ -2621,11 +2181,11 @@ workflow:
       height: 155
       id: '17799400383490'
       position:
-        x: 3520
-        y: 189.53571428571428
+        x: 2764
+        y: 102.89999999999998
       positionAbsolute:
-        x: 3520
-        y: 189.53571428571428
+        x: 2764
+        y: 102.89999999999998
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2640,11 +2200,11 @@ workflow:
       height: 103
       id: '1779940060929'
       position:
-        x: 3862
-        y: 240.53571428571428
+        x: 3107
+        y: 154.73333333333335
       positionAbsolute:
-        x: 3862
-        y: 240.53571428571428
+        x: 3107
+        y: 154.73333333333335
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2683,99 +2243,11 @@ workflow:
       height: 53
       id: '1779940110651'
       position:
-        x: 4928
-        y: 676.35
+        x: 4176
+        y: 841.447619047619
       positionAbsolute:
-        x: 4928
-        y: 676.35
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        authorization:
-          config: null
-          type: no-auth
-        body:
-          data: []
-          type: none
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
-        method: get
-        params: ''
-        retry_config:
-          max_retries: 3
-          retry_enabled: true
-          retry_interval: 100
-        selected: false
-        ssl_verify: true
-        timeout:
-          max_connect_timeout: 0
-          max_read_timeout: 0
-          max_write_timeout: 0
-        title: care-plan
-        type: http-request
-        url: https://ai-assistant-psy-mvp.619569391.workers.dev/care-plan/{{#1779204939074.user_id#}}
-        variables: []
-      height: 158
-      id: '1779963128615'
-      position:
-        x: 2112
-        y: 353.7190476190476
-      positionAbsolute:
-        x: 2112
-        y: 353.7190476190476
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        code: "import json\n\ndef main(body: str) -> dict:\n    default_plan = \"\
-          暂无咨询计划表。\"\n\n    if not body:\n        return {\n            \"exists\"\
-          : False,\n            \"plan_text\": default_plan,\n            \"updated_at\"\
-          : \"\"\n        }\n\n    if isinstance(body, str):\n        try:\n     \
-          \       data = json.loads(body)\n        except Exception:\n           \
-          \ return {\n                \"exists\": False,\n                \"plan_text\"\
-          : default_plan,\n                \"updated_at\": \"\"\n            }\n \
-          \   elif isinstance(body, dict):\n        data = body\n    else:\n     \
-          \   return {\n            \"exists\": False,\n            \"plan_text\"\
-          : default_plan,\n            \"updated_at\": \"\"\n        }\n\n    exists\
-          \ = bool(data.get(\"exists\", False))\n\n    plan_text = data.get(\"plan_text\"\
-          , \"\")\n    if not isinstance(plan_text, str):\n        plan_text = str(plan_text)\n\
-          \n    plan_text = plan_text.strip()\n    if not plan_text:\n        plan_text\
-          \ = default_plan\n\n    updated_at = data.get(\"updated_at\", \"\")\n  \
-          \  if not isinstance(updated_at, str):\n        updated_at = str(updated_at)\n\
-          \n    return {\n        \"exists\": exists,\n        \"plan_text\": plan_text[:4000],\n\
-          \        \"updated_at\": updated_at.strip()\n    }"
-        code_language: python3
-        outputs:
-          exists:
-            children: null
-            type: boolean
-          plan_text:
-            children: null
-            type: string
-          updated_at:
-            children: null
-            type: string
-        selected: false
-        title: care-plan-parse
-        type: code
-        variables:
-        - value_selector:
-          - '1779963128615'
-          - body
-          value_type: string
-          variable: body
-      height: 53
-      id: '1779963168931'
-      position:
-        x: 2454
-        y: 431.552380952381
-      positionAbsolute:
-        x: 2454
-        y: 431.552380952381
+        x: 4176
+        y: 841.447619047619
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2812,7 +2284,7 @@ workflow:
 
             旧计划表：
 
-            {{#1779963168931.plan_text#}}
+            {{#1780825876878.plan_text#}}
 
 
             本次咨询总结：
@@ -3024,11 +2496,11 @@ workflow:
       height: 89
       id: '1779963775579'
       position:
-        x: 5604.857142857143
-        y: 414.5
+        x: 4862
+        y: 596.3309523809525
       positionAbsolute:
-        x: 5604.857142857143
-        y: 414.5
+        x: 4862
+        y: 596.3309523809525
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3046,7 +2518,7 @@ workflow:
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"plan_text\"\
               : \"{{#1779963775579.text#}}\"\n}"
           type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         method: post
         params: ''
         retry_config:
@@ -3066,11 +2538,11 @@ workflow:
       height: 155
       id: '1779963867804'
       position:
-        x: 5954
-        y: 414.5
+        x: 5205
+        y: 578.1642857142857
       positionAbsolute:
-        x: 5954
-        y: 414.5
+        x: 5205
+        y: 578.1642857142857
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3098,7 +2570,7 @@ workflow:
             - 用户还在提出新问题、要求计划、要求建议。\n- 用户只是说“不知道怎么说”，但没有表达结束。\n- 用户只是情绪低落或沉默倾向，不等于结束。\n\
             - 用户只是说“困了”“好困”“有点累”“状态不好”，不等于结束。\n- 用户只是烦躁、质疑 Agent、说不想被这样问，不等于结束，除非明确说今天不聊了。\n\
             - 如果用户只是表达困倦或疲惫，应判断为 false，除非明确说“今天先到这里 / 我要去睡了 / 先不聊了”。\n\n用户当前输入：\n\
-            {{#sys.query#}}\n\n当前对话记录：\n{{#17798742810070.transcript_text#}}"
+            {{#sys.query#}}\n\n当前对话记录：\n{{#1780825876878.transcript_text#}}"
         selected: false
         title: USER END INTENT DETECTION
         type: llm
@@ -3107,11 +2579,11 @@ workflow:
       height: 89
       id: '1779968567689'
       position:
-        x: 3171.084433704903
-        y: 459.78571428571433
+        x: 2421
+        y: 405.06666666666666
       positionAbsolute:
-        x: 3171.084433704903
-        y: 459.78571428571433
+        x: 2421
+        y: 405.06666666666666
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3196,28 +2668,28 @@ workflow:
           value_type: string
           variable: current_query
         - value_selector:
-          - '1779349355740'
+          - '1780825876878'
           - can_continue
           value_type: boolean
           variable: can_continue
         - value_selector:
-          - '1779349355740'
+          - '1780825876878'
           - session_stage
           value_type: string
           variable: session_stage
         - value_selector:
-          - '1779349355740'
+          - '1780825876878'
           - remaining_minutes
           value_type: number
           variable: remaining_minutes
       height: 53
       id: '1779968610422'
       position:
-        x: 3520
-        y: 487.0357142857143
+        x: 2764
+        y: 437.9
       positionAbsolute:
-        x: 3520
-        y: 487.0357142857143
+        x: 2764
+        y: 437.9
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3279,11 +2751,11 @@ workflow:
       height: 53
       id: '1780038042537'
       position:
-        x: 6296
-        y: 280
+        x: 5548
+        y: 441.9976190476191
       positionAbsolute:
-        x: 6296
-        y: 280
+        x: 5548
+        y: 441.9976190476191
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3311,7 +2783,7 @@ workflow:
             \ should_save = false。\n\n禁止把“用户主动结束”“用户追问任务”“用户质疑问题”解释成不满、防御、逃避、缺乏耐心。\n\
             除非用户明确说“不满/不舒服/不想继续”，否则只能中性记录行为。\n\n只输出 JSON，不要输出其他文字：\n\n{\n  \"should_save\"\
             : true,\n  \"profile_memory\": \"改写后的长期画像正文\",\n  \"reason\": \"ok\"\n\
-            }\n\n旧的长期画像：\n{{#1779716715273.profile_memory#}}\n\n本次咨询对话记录：\n{{#17798742810070.transcript_text#}}\n\
+            }\n\n旧的长期画像：\n{{#1780825876878.profile_memory#}}\n\n本次咨询对话记录：\n{{#1780825876878.transcript_text#}}\n\
             \n画像草稿：\n{{#1779868007113.text#}}"
         selected: false
         title: Profile Quality Check
@@ -3321,11 +2793,11 @@ workflow:
       height: 89
       id: '1780040399983'
       position:
-        x: 5954
-        y: 247.5
+        x: 5205
+        y: 409.1642857142857
       positionAbsolute:
-        x: 5954
-        y: 247.5
+        x: 5205
+        y: 409.1642857142857
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3357,11 +2829,11 @@ workflow:
       height: 191
       id: '1780041151933'
       position:
-        x: 6570.857142857143
-        y: 177.3571428571429
+        x: 5891
+        y: 381.83095238095245
       positionAbsolute:
-        x: 6570.857142857143
-        y: 177.3571428571429
+        x: 5891
+        y: 381.83095238095245
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3377,9 +2849,9 @@ workflow:
             key: ''
             type: text
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\"\n}"
+              : \"{{#1780825876878.session_id#}}\"\n}"
           type: json
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         method: post
         params: ''
         retry_config:
@@ -3399,11 +2871,11 @@ workflow:
       height: 155
       id: '1780051156476'
       position:
-        x: 6256
-        y: 414.5
+        x: 5548
+        y: 603.9976190476191
       positionAbsolute:
-        x: 6256
-        y: 414.5
+        x: 5548
+        y: 603.9976190476191
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3509,7 +2981,7 @@ workflow:
 
             本次咨询对话：
 
-            {{#17798742810070.transcript_text#}}
+            {{#1780825876878.transcript_text#}}
 
 
             请只根据用户当前输入，输出结束后的简短回应。'
@@ -3521,11 +2993,11 @@ workflow:
       height: 89
       id: '1780061016312'
       position:
-        x: 4275.644498401773
-        y: 74.94660453773176
+        x: 3470
+        y: 189.6880952380953
       positionAbsolute:
-        x: 4275.644498401773
-        y: 74.94660453773176
+        x: 3470
+        y: 189.6880952380953
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3541,11 +3013,11 @@ workflow:
             key: ''
             type: text
             value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
-              : \"{{#1779349355740.session_id#}}\",\n  \"role\": \"assistant\",\n\
+              : \"{{#1780825876878.session_id#}}\",\n  \"role\": \"assistant\",\n\
               \  \"content\": \"{{#1780061016312.text#}}\"\n}"
           type: json
         desc: ''
-        headers: 'X-Backend-Token: {{#env.BACKEND_SHARED_TOKEN#}}'
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
         isInIteration: false
         isInLoop: false
         method: post
@@ -3567,11 +3039,11 @@ workflow:
       height: 155
       id: '17800612389130'
       position:
-        x: 4596.304576753908
-        y: -12.278584432125484
+        x: 3813
+        y: 171.5214285714286
       positionAbsolute:
-        x: 4596.304576753908
-        y: -12.278584432125484
+        x: 3813
+        y: 171.5214285714286
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3589,18 +3061,292 @@ workflow:
       height: 103
       id: '17800612687800'
       position:
-        x: 5038.087254664006
-        y: -6.217669081343786
+        x: 4156
+        y: 223.35476190476197
       positionAbsolute:
-        x: 5038.087254664006
-        y: -6.217669081343786
+        x: 4156
+        y: 223.35476190476197
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 243
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-1167
+            key: ''
+            type: text
+            value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"query\"\
+              : \"{{#sys.query#}}\"\n}"
+          type: json
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 100
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 0
+          max_read_timeout: 0
+          max_write_timeout: 0
+        title: 用户信息聚合查询
+        type: http-request
+        url: https://ai-assistant-psy-mvp.619569391.workers.dev/dify/turn-prep
+        variables: []
+      height: 155
+      id: '1780825750403'
+      position:
+        x: 343
+        y: -1.4285714285714306
+      positionAbsolute:
+        x: 343
+        y: -1.4285714285714306
+      selected: true
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 243
+    - data:
+        code: "import json\n\n\ndef as_bool(value, default=False):\n    if isinstance(value,\
+          \ bool):\n        return value\n    if isinstance(value, (int, float)):\n\
+          \        return value != 0\n    if isinstance(value, str):\n        return\
+          \ value.strip().lower() in [\"true\", \"1\", \"yes\", \"y\", \"是\"]\n  \
+          \  return default\n\n\ndef as_int(value, default=0):\n    try:\n       \
+          \ return int(value)\n    except Exception:\n        return default\n\n\n\
+          def as_str(value, default=\"\"):\n    if value is None:\n        return\
+          \ default\n    if isinstance(value, str):\n        return value\n    return\
+          \ json.dumps(value, ensure_ascii=False)\n\n\ndef pick(*values, default=None):\n\
+          \    for value in values:\n        if value is not None:\n            return\
+          \ value\n    return default\n\n\ndef build_transcript(messages):\n    lines\
+          \ = []\n    if not isinstance(messages, list):\n        return \"\"\n\n\
+          \    for item in messages:\n        if not isinstance(item, dict):\n   \
+          \         continue\n\n        role = item.get(\"role\", \"\")\n        content\
+          \ = as_str(item.get(\"content\", \"\")).strip()\n        if not content:\n\
+          \            continue\n\n        if role == \"user\":\n            label\
+          \ = \"用户\"\n        elif role == \"assistant\":\n            label = \"\
+          助手\"\n        else:\n            label = role or \"消息\"\n\n        lines.append(f\"\
+          {label}: {content}\")\n\n    return \"\\n\".join(lines)\n\n\ndef main(body)\
+          \ -> dict:\n    try:\n        if isinstance(body, str):\n            data\
+          \ = json.loads(body) if body.strip() else {}\n        elif isinstance(body,\
+          \ dict):\n            data = body\n        else:\n            data = {}\n\
+          \    except Exception as e:\n        return {\n            \"parse_ok\"\
+          : False,\n            \"success\": False,\n            \"message\": f\"\
+          turn-prep 返回解析失败: {str(e)}\",\n            \"can_continue\": False,\n  \
+          \          \"can_continue_text\": \"false\",\n            \"context_text\"\
+          : \"暂无历史上下文。\",\n            \"transcript_text\": \"\",\n            \"\
+          plan_text\": \"暂无咨询计划表。\",\n        }\n\n    session_status = data.get(\"\
+          session_status\") or {}\n    message_save = data.get(\"message_save\") or\
+          \ {}\n    context = data.get(\"context\") or {}\n    transcript = data.get(\"\
+          transcript\") or {}\n    care_plan = data.get(\"care_plan\") or {}\n\n \
+          \   transcript_text = as_str(\n        pick(\n            data.get(\"transcript_text\"\
+          ),\n            transcript.get(\"transcript_text\"),\n            transcript.get(\"\
+          text\"),\n            default=\"\"\n        )\n    ).strip()\n\n    if not\
+          \ transcript_text:\n        transcript_text = build_transcript(transcript.get(\"\
+          messages\"))\n\n    context_text = as_str(\n        pick(\n            data.get(\"\
+          context_text\"),\n            context.get(\"context_text\"),\n         \
+          \   default=\"\"\n        )\n    ).strip() or \"暂无历史上下文。\"\n\n    plan_text\
+          \ = as_str(\n        pick(\n            data.get(\"plan_text\"),\n     \
+          \       care_plan.get(\"plan_text\"),\n            care_plan.get(\"content\"\
+          ),\n            default=\"\"\n        )\n    ).strip() or \"暂无咨询计划表。\"\n\
+          \n    can_continue = as_bool(\n        pick(data.get(\"can_continue\"),\
+          \ session_status.get(\"can_continue\")),\n        False\n    )\n\n    final_saved\
+          \ = as_bool(\n        pick(data.get(\"final_saved\"), session_status.get(\"\
+          final_saved\")),\n        False\n    )\n\n    has_transcript = as_bool(\n\
+          \        pick(data.get(\"has_transcript\"), transcript.get(\"has_transcript\"\
+          )),\n        bool(transcript_text)\n    )\n\n    user_message_saved = as_bool(\n\
+          \        pick(\n            data.get(\"user_message_saved\"),\n        \
+          \    message_save.get(\"success\"),\n            message_save.get(\"saved\"\
+          )\n        ),\n        False\n    )\n\n    care_plan_exists = as_bool(\n\
+          \        pick(data.get(\"care_plan_exists\"), care_plan.get(\"exists\")),\n\
+          \        bool(plan_text and plan_text != \"暂无咨询计划表。\")\n    )\n\n    return\
+          \ {\n        \"parse_ok\": True,\n        \"success\": as_bool(data.get(\"\
+          success\"), True),\n\n        \"user_id\": as_str(data.get(\"user_id\")),\n\
+          \        \"session_id\": as_str(pick(data.get(\"session_id\"), session_status.get(\"\
+          session_id\"))),\n        \"status\": as_str(pick(data.get(\"status\"),\
+          \ session_status.get(\"status\"))),\n\n        \"session_stage\": as_str(\n\
+          \            pick(\n                data.get(\"session_stage\"),\n     \
+          \           data.get(\"stage\"),\n                session_status.get(\"\
+          session_stage\"),\n                session_status.get(\"stage\"),\n    \
+          \            default=\"\"\n            )\n        ),\n        \"stage\"\
+          : as_str(\n            pick(\n                data.get(\"stage\"),\n   \
+          \             data.get(\"session_stage\"),\n                session_status.get(\"\
+          stage\"),\n                session_status.get(\"session_stage\"),\n    \
+          \            default=\"\"\n            )\n        ),\n\n        \"can_continue\"\
+          : can_continue,\n        \"can_continue_text\": \"true\" if can_continue\
+          \ else \"false\",\n\n        \"can_start_new_session\": as_bool(\n     \
+          \       pick(data.get(\"can_start_new_session\"), session_status.get(\"\
+          can_start_new_session\")),\n            False\n        ),\n        \"daily_limit_reached\"\
+          : as_bool(\n            pick(data.get(\"daily_limit_reached\"), session_status.get(\"\
+          daily_limit_reached\")),\n            False\n        ),\n\n        \"is_new_session\"\
+          : as_bool(\n            pick(data.get(\"is_new_session\"), session_status.get(\"\
+          is_new_session\")),\n            False\n        ),\n        \"is_new_session_str\"\
+          : as_str(\n            pick(data.get(\"is_new_session_str\"), session_status.get(\"\
+          is_new_session_str\"), default=\"false\")\n        ),\n\n        \"remaining_minutes\"\
+          : as_int(\n            pick(data.get(\"remaining_minutes\"), session_status.get(\"\
+          remaining_minutes\")),\n            0\n        ),\n        \"elapsed_minutes\"\
+          : as_int(\n            pick(data.get(\"elapsed_minutes\"), session_status.get(\"\
+          elapsed_minutes\")),\n            0\n        ),\n\n        \"message\":\
+          \ as_str(pick(data.get(\"message\"), session_status.get(\"message\"))),\n\
+          \        \"final_saved\": final_saved,\n        \"final_saved_text\": \"\
+          true\" if final_saved else \"false\",\n\n        \"risk_level\": as_str(\n\
+          \            pick(data.get(\"risk_level\"), message_save.get(\"risk_level\"\
+          ), session_status.get(\"risk_level\"))\n        ),\n\n        \"user_message_saved\"\
+          : user_message_saved,\n        \"user_message_saved_text\": \"true\" if\
+          \ user_message_saved else \"false\",\n        \"user_message_risk_level\"\
+          : as_str(\n            pick(data.get(\"user_message_risk_level\"), message_save.get(\"\
+          risk_level\"))\n        ),\n\n        \"context_text\": context_text,\n\
+          \        \"profile_memory\": as_str(pick(data.get(\"profile_memory\"), context.get(\"\
+          profile_memory\"))),\n        \"recent_screening\": as_str(pick(data.get(\"\
+          recent_screening\"), context.get(\"recent_screening\"))),\n        \"recent_session_summaries\"\
+          : as_str(\n            pick(data.get(\"recent_session_summaries\"), context.get(\"\
+          recent_session_summaries\"))\n        ),\n        \"recent_memories\": as_str(pick(data.get(\"\
+          recent_memories\"), context.get(\"recent_memories\"))),\n\n        \"transcript_text\"\
+          : transcript_text,\n        \"message_count\": as_int(pick(data.get(\"message_count\"\
+          ), transcript.get(\"message_count\")), 0),\n        \"has_transcript\":\
+          \ has_transcript,\n        \"has_transcript_text\": \"true\" if has_transcript\
+          \ else \"false\",\n\n        \"care_plan_exists\": care_plan_exists,\n \
+          \       \"care_plan_exists_text\": \"true\" if care_plan_exists else \"\
+          false\",\n        \"plan_text\": plan_text,\n        \"care_plan_updated_at\"\
+          : as_str(\n            pick(data.get(\"care_plan_updated_at\"), care_plan.get(\"\
+          updated_at\"))\n        ),\n    }"
+        code_language: python3
+        outputs:
+          can_continue:
+            children: null
+            type: boolean
+          can_continue_text:
+            children: null
+            type: string
+          can_start_new_session:
+            children: null
+            type: boolean
+          care_plan_exists:
+            children: null
+            type: boolean
+          care_plan_exists_text:
+            children: null
+            type: string
+          care_plan_updated_at:
+            children: null
+            type: string
+          context_text:
+            children: null
+            type: string
+          daily_limit_reached:
+            children: null
+            type: boolean
+          elapsed_minutes:
+            children: null
+            type: number
+          final_saved:
+            children: null
+            type: boolean
+          final_saved_text:
+            children: null
+            type: string
+          has_transcript:
+            children: null
+            type: boolean
+          has_transcript_text:
+            children: null
+            type: string
+          is_new_session:
+            children: null
+            type: boolean
+          is_new_session_str:
+            children: null
+            type: string
+          message:
+            children: null
+            type: string
+          message_count:
+            children: null
+            type: number
+          parse_ok:
+            children: null
+            type: boolean
+          plan_text:
+            children: null
+            type: string
+          profile_memory:
+            children: null
+            type: string
+          recent_memories:
+            children: null
+            type: string
+          recent_screening:
+            children: null
+            type: string
+          recent_session_summaries:
+            children: null
+            type: string
+          remaining_minutes:
+            children: null
+            type: number
+          risk_level:
+            children: null
+            type: string
+          session_id:
+            children: null
+            type: string
+          session_stage:
+            children: null
+            type: string
+          stage:
+            children: null
+            type: string
+          status:
+            children: null
+            type: string
+          success:
+            children: null
+            type: boolean
+          transcript_text:
+            children: null
+            type: string
+          user_id:
+            children: null
+            type: string
+          user_message_risk_level:
+            children: null
+            type: string
+          user_message_saved:
+            children: null
+            type: boolean
+          user_message_saved_text:
+            children: null
+            type: string
+        selected: false
+        title: 聚合查询解析
+        type: code
+        variables:
+        - value_selector:
+          - '1780825750403'
+          - body
+          value_type: string
+          variable: body
+      height: 53
+      id: '1780825876878'
+      position:
+        x: 686
+        y: 76.83333333333337
+      positionAbsolute:
+        x: 686
+        y: 76.83333333333337
       selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
       width: 243
     viewport:
-      x: -4723.817330840911
-      y: 460.66892320771706
-      zoom: 0.8324449890999773
+      x: -3389.5499999999997
+      y: 443.8516666666667
+      zoom: 0.7
   rag_pipeline_variables: []
