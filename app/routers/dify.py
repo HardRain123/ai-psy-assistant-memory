@@ -36,6 +36,9 @@ def dify_turn_prep(req: DifyTurnPrepRequest):
                 content=query,
             )
         )
+        if message_save.get("success"):
+            status = session_status(req.user_id)
+
         context = get_context(req.user_id)
         transcript = get_session_transcript(session_id)
         care_plan = get_care_plan(req.user_id)

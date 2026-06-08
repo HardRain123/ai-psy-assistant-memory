@@ -26,7 +26,41 @@ def parse_dt(value: str) -> datetime:
 
 
 def clean_text(value: str) -> str:
-    return " ".join((value or "").strip().split())
+    return " ".join(repair_mojibake_text(value or "").strip().split())
+
+
+def repair_mojibake_text(value: str) -> str:
+    text = value or ""
+    if not _looks_like_utf8_mojibake(text):
+        return text
+
+    try:
+        repaired = text.encode("latin1").decode("utf-8")
+    except UnicodeError:
+        return text
+
+    if _text_quality_score(repaired) > _text_quality_score(text):
+        return repaired
+    return text
+
+
+def _looks_like_utf8_mojibake(text: str) -> bool:
+    if not text:
+        return False
+
+    has_c1_controls = any(0x80 <= ord(char) <= 0x9F for char in text)
+    marker_count = sum(text.count(marker) for marker in ("Ã", "Â", "â", "æ", "ç", "è", "å", "ä", "é"))
+    return has_c1_controls or (_cjk_count(text) == 0 and marker_count >= 2)
+
+
+def _text_quality_score(text: str) -> int:
+    c1_controls = sum(1 for char in text if 0x80 <= ord(char) <= 0x9F)
+    mojibake_markers = sum(text.count(marker) for marker in ("Ã", "Â", "â", "æ", "ç", "è", "å", "ä", "é"))
+    return (_cjk_count(text) * 4) - (c1_controls * 3) - mojibake_markers
+
+
+def _cjk_count(text: str) -> int:
+    return sum(1 for char in text if "\u4e00" <= char <= "\u9fff")
 
 
 def truncate_text(value: str, limit: int = 280) -> str:

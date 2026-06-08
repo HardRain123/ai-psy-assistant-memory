@@ -21,6 +21,7 @@ from app.utils import (
 logger = logging.getLogger(__name__)
 
 
+PENDING_STATUS = "pending"
 ENDED_STATUSES = {"ended", "expired", "failed"}
 
 
@@ -52,13 +53,14 @@ def has_session_today(cur, user_id: str) -> bool:
         SELECT id
         FROM sessions
         WHERE user_id = ?
+          AND status != ?
           AND (
             (started_at >= ? AND started_at < ?)
             OR (ended_at >= ? AND ended_at < ?)
           )
         LIMIT 1
         """,
-        (user_id, day_start, day_end, day_start, day_end),
+        (user_id, PENDING_STATUS, day_start, day_end, day_start, day_end),
     )
     return cur.fetchone() is not None
 
@@ -136,6 +138,128 @@ def create_session(cur, user_id: str):
         "message": "可以开始今天的新咨询。",
         "final_saved": False,
         "risk_level": "none",
+        "timer_started": True,
+    }
+
+
+def create_pending_session(cur, user_id: str):
+    ensure_user(cur, user_id)
+    session_id = str(uuid.uuid4())
+    now = now_iso()
+
+    cur.execute(
+        """
+        INSERT INTO sessions (
+            id, session_id, user_id, started_at, ended_at, status,
+            auto_close_at, stage, risk_level, is_low_content, summary_type,
+            user_message_count, user_char_count, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            session_id,
+            session_id,
+            user_id,
+            now,
+            None,
+            PENDING_STATUS,
+            None,
+            "not_started",
+            "none",
+            0,
+            "formal",
+            0,
+            0,
+            now,
+            now,
+        ),
+    )
+
+    row = get_latest_session(cur, user_id)
+    logger.info("session_pending_created user_id=%s session_id=%s", user_id, session_id)
+    return pending_status_response(row, is_new_session=True)
+
+
+def _same_time_on_date(value: str | None, fallback: datetime, target_date) -> str:
+    source = parse_dt(value) if value else fallback
+    return datetime.combine(target_date, source.time()).isoformat()
+
+
+def reset_latest_session_to_yesterday(cur, user_id: str) -> dict | None:
+    row = get_latest_session(cur, user_id)
+    if not row:
+        return None
+
+    (
+        session_pk,
+        public_session_id,
+        _user_id,
+        started_at_str,
+        ended_at_str,
+        _status,
+        final_saved_at,
+        auto_close_at,
+        _stage,
+        _summary,
+        _risk_level,
+        _is_low_content,
+        _summary_type,
+        _user_message_count,
+        _user_char_count,
+    ) = row
+    session_id = public_session_id or session_pk
+
+    started_fallback = parse_dt(started_at_str) if started_at_str else datetime.now()
+    yesterday = datetime.now().date() - timedelta(days=1)
+    shifted_started_at = _same_time_on_date(started_at_str, started_fallback, yesterday)
+    shifted_started_dt = parse_dt(shifted_started_at)
+    shifted_auto_close_at = _same_time_on_date(
+        auto_close_at,
+        shifted_started_dt + timedelta(minutes=SESSION_MINUTES),
+        yesterday,
+    )
+    shifted_ended_at = _same_time_on_date(
+        ended_at_str,
+        parse_dt(shifted_auto_close_at),
+        yesterday,
+    )
+    shifted_final_saved_at = _same_time_on_date(final_saved_at, parse_dt(shifted_ended_at), yesterday)
+    now = now_iso()
+
+    cur.execute(
+        """
+        UPDATE sessions
+        SET started_at = ?,
+            auto_close_at = ?,
+            ended_at = ?,
+            final_saved_at = ?,
+            status = 'ended',
+            stage = 'ended',
+            close_reason = 'admin_self_session_reset',
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            shifted_started_at,
+            shifted_auto_close_at,
+            shifted_ended_at,
+            shifted_final_saved_at,
+            now,
+            session_pk,
+        ),
+    )
+
+    new_session = create_pending_session(cur, user_id)
+    logger.info(
+        "admin_self_session_reset user_id=%s shifted_session_id=%s new_session_id=%s",
+        user_id,
+        session_id,
+        new_session.get("session_id"),
+    )
+    return {
+        "success": True,
+        "shifted_session_id": session_id,
+        "new_session": new_session,
     }
 
 
@@ -165,6 +289,64 @@ def _fetch_session_for_update(cur, session_id: str, user_id: str | None = None):
             (session_id, session_id),
         )
     return cur.fetchone()
+
+
+def activate_session_if_pending(cur, session_id: str, user_id: str | None = None) -> bool:
+    row = _fetch_session_for_update(cur, session_id, user_id)
+    if not row:
+        return False
+
+    (
+        session_pk,
+        public_session_id,
+        session_user_id,
+        _started_at,
+        ended_at,
+        status,
+        _final_saved_at,
+        _auto_close_at,
+        _summary,
+        _risk_level,
+        _is_low_content,
+        _summary_type,
+        _user_message_count,
+        _user_char_count,
+    ) = row
+    if status != PENDING_STATUS or ended_at:
+        return False
+
+    started_at = datetime.now()
+    started_at_str = started_at.isoformat()
+    auto_close_at_str = (started_at + timedelta(minutes=SESSION_MINUTES)).isoformat()
+    cur.execute(
+        """
+        UPDATE sessions
+        SET started_at = ?,
+            auto_close_at = ?,
+            status = 'open',
+            stage = 'trust',
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (started_at_str, auto_close_at_str, started_at_str, session_pk),
+    )
+    logger.info(
+        "session_pending_activated user_id=%s session_id=%s",
+        session_user_id,
+        public_session_id or session_pk,
+    )
+    return True
+
+
+def activate_latest_pending_session(cur, user_id: str) -> dict | None:
+    row = get_latest_session(cur, user_id)
+    if not row or row[5] != PENDING_STATUS:
+        return None
+
+    session_id = row[1] or row[0]
+    activate_session_if_pending(cur, session_id, user_id=user_id)
+    refreshed = get_latest_session(cur, user_id)
+    return active_status_response(refreshed) if refreshed else None
 
 
 def _fetch_messages(cur, session_id: str):
@@ -387,6 +569,7 @@ def end_session_workflow(
 
     now = now_iso()
     fallback_ended_at = (parse_dt(started_at) + timedelta(minutes=SESSION_MINUTES)).isoformat()
+    auto_close_at_value = auto_close_at or fallback_ended_at
     scheduled_close_reasons = {
         "auto_timeout",
         "auto_timeout_task",
@@ -396,7 +579,7 @@ def end_session_workflow(
     if ended_at:
         ended_at_value = ended_at
     elif reason in scheduled_close_reasons:
-        ended_at_value = auto_close_at or fallback_ended_at
+        ended_at_value = auto_close_at_value
     else:
         ended_at_value = now
     close_status = "ended"
@@ -448,6 +631,7 @@ def end_session_workflow(
         SET status = ?,
             ended_at = ?,
             final_saved_at = ?,
+            auto_close_at = COALESCE(auto_close_at, ?),
             close_reason = ?,
             timeout_checked_at = ?,
             stage = 'ended',
@@ -464,6 +648,7 @@ def end_session_workflow(
             close_status,
             ended_at_value,
             now,
+            auto_close_at_value,
             reason,
             now,
             summary,
@@ -542,6 +727,9 @@ def active_status_response(row) -> dict:
         user_message_count,
         user_char_count,
     ) = row
+    if status == PENDING_STATUS:
+        return pending_status_response(row)
+
     elapsed, remaining, current_stage = calc_stage(parse_dt(started_at_str))
     return {
         "session_id": public_session_id or session_pk,
@@ -564,6 +752,51 @@ def active_status_response(row) -> dict:
         "summary_type": summary_type or "formal",
         "user_message_count": user_message_count or 0,
         "user_char_count": user_char_count or 0,
+        "timer_started": True,
+    }
+
+
+def pending_status_response(row, is_new_session: bool = False) -> dict:
+    (
+        session_pk,
+        public_session_id,
+        _user_id,
+        started_at_str,
+        ended_at_str,
+        _status,
+        final_saved_at,
+        _auto_close_at,
+        _stage,
+        _summary,
+        risk_level,
+        is_low_content,
+        summary_type,
+        user_message_count,
+        user_char_count,
+    ) = row
+    return {
+        "session_id": public_session_id or session_pk,
+        "status": PENDING_STATUS,
+        "started_at": None,
+        "created_at": started_at_str,
+        "ended_at": ended_at_str,
+        "elapsed_minutes": 0,
+        "remaining_minutes": SESSION_MINUTES,
+        "stage": "not_started",
+        "session_stage": "not_started",
+        "is_new_session": is_new_session,
+        "is_new_session_str": bool_text(is_new_session),
+        "can_continue": True,
+        "can_start_new_session": False,
+        "daily_limit_reached": False,
+        "message": "session pending until first user message",
+        "final_saved": bool(final_saved_at),
+        "risk_level": risk_level or "none",
+        "is_low_content": bool(is_low_content),
+        "summary_type": summary_type or "formal",
+        "user_message_count": user_message_count or 0,
+        "user_char_count": user_char_count or 0,
+        "timer_started": False,
     }
 
 
@@ -593,4 +826,5 @@ def ended_status_response(
         "message": message,
         "final_saved": bool(final_saved_at),
         "risk_level": risk_level or "none",
+        "timer_started": True,
     }

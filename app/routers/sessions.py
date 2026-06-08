@@ -8,7 +8,10 @@ from app.errors import public_error
 from app.schemas import FinalizeSessionRequest
 from app.services.sessions import (
     ENDED_STATUSES,
+    PENDING_STATUS,
+    activate_latest_pending_session,
     active_status_response,
+    create_pending_session,
     create_session,
     end_session_workflow,
     ended_status_response,
@@ -30,7 +33,7 @@ def session_status(user_id: str):
 
         if not row:
             with transaction() as cur:
-                return create_session(cur, user_id)
+                return create_pending_session(cur, user_id)
 
         (
             session_pk,
@@ -51,6 +54,9 @@ def session_status(user_id: str):
         ) = row
         session_id = public_session_id or session_pk
 
+        if status == PENDING_STATUS:
+            return active_status_response(row)
+
         if status in ENDED_STATUSES:
             with read_transaction() as cur:
                 if has_session_today(cur, user_id):
@@ -62,7 +68,7 @@ def session_status(user_id: str):
                         risk_level=risk_level,
                     )
             with transaction() as cur:
-                return create_session(cur, user_id)
+                return create_pending_session(cur, user_id)
 
         started_at = parse_dt(started_at_str)
         today = datetime.now().date()
@@ -78,7 +84,7 @@ def session_status(user_id: str):
                     reason="auto_previous_day_status_check",
                 )
                 logger.info("previous_day_session_closed user_id=%s session_id=%s", user_id, session_id)
-                return create_session(cur, user_id)
+                return create_pending_session(cur, user_id)
 
         if current_stage == "ended" or auto_close_reached:
             with transaction() as cur:
@@ -117,6 +123,10 @@ def start_session(user_id: str):
                     "daily_limit_reached": True,
                     "message": "今天已经进行过一次正式咨询，明天可以开始下一次。",
                 }
+
+            pending_result = activate_latest_pending_session(cur, user_id)
+            if pending_result:
+                return {"success": True, **pending_result}
 
             cur.execute(
                 """

@@ -68,6 +68,8 @@ ERROR_MESSAGES = {
     "admin_user_list_failed": "读取用户列表失败，请稍后再试。",
     "admin_user_export_failed": "导出用户数据失败，请稍后再试。",
     "admin_user_disable_failed": "停用账号失败，请稍后再试。",
+    "admin_self_session_reset_failed": "重置会话失败，请稍后再试。",
+    "session_not_found": "会话不存在。",
     "user_not_found": "用户不存在。",
     "cannot_disable_self": "不能停用当前登录的管理员账号。",
     "cannot_disable_admin": "不能停用管理员账号。",

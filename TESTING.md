@@ -15,6 +15,35 @@ pytest -q
 
 Default tests must not call real Dify. The real E2E suite is skipped unless `RUN_DIFY_E2E=true`.
 
+## Focused Dify UX Validation
+
+After manually changing the hosted Dify workflow for safety, low-participation, or latency behavior, run the focused UX validator:
+
+```powershell
+python tests\dify_ux_validation.py --require-pass
+```
+
+It uses isolated `codex-e2e-test-user-{run_id}-{scenario}` users and writes:
+
+```text
+test-artifacts/dify-ux-{run_id}.json
+test-artifacts/dify-ux-{run_id}.md
+```
+
+To check only the ordinary low-mood latency path while tuning speed:
+
+```powershell
+python tests\dify_ux_validation.py --scenarios ordinary --skip-backend --require-pass
+```
+
+To re-check backend transcript persistence for an existing report without re-running Dify chat:
+
+```powershell
+python tests\dify_ux_validation.py --transcript-only test-artifacts\dify-ux-{run_id}.json --require-pass
+```
+
+The focused validator checks that risk replies include safety support in the first two turns, low-participation turns are not mistakenly ended, anti-advice turns do not invent a prior plan, ordinary replies average 8-12 seconds with no ordinary turn over 20 seconds, and transcript counts are complete when backend checks are enabled.
+
 ## Real Dify Chatflow Longitudinal E2E
 
 Required environment variables:

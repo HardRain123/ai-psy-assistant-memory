@@ -1,5 +1,40 @@
 import { backendRequest, clearSessionCookie, getCurrentUser } from '../_lib/auth'
 
+async function getCurrentSessionId(userId: string, sessionToken: string) {
+  const result = await backendRequest(`/session/status/${encodeURIComponent(userId)}`, {
+    method: 'GET',
+    sessionToken,
+  })
+  return result.ok && typeof result.data?.session_id === 'string' ? result.data.session_id : ''
+}
+
+async function saveSessionMessage({
+  userId,
+  sessionId,
+  role,
+  content,
+  sessionToken,
+}: {
+  userId: string
+  sessionId: string
+  role: 'user' | 'assistant'
+  content: string
+  sessionToken: string
+}) {
+  if (!sessionId || !content.trim()) return
+
+  await backendRequest('/session-message', {
+    method: 'POST',
+    sessionToken,
+    body: JSON.stringify({
+      user_id: userId,
+      session_id: sessionId,
+      role,
+      content,
+    }),
+  })
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
@@ -31,6 +66,15 @@ export async function POST(req: Request) {
     }
 
     const userId = current.user.user_id
+    const sessionId = await getCurrentSessionId(userId, current.sessionToken)
+    await saveSessionMessage({
+      userId,
+      sessionId,
+      role: 'user',
+      content: message.trim(),
+      sessionToken: current.sessionToken,
+    })
+
     const contextResult = await backendRequest(`/context/${encodeURIComponent(userId)}`, {
       method: 'GET',
       sessionToken: current.sessionToken,
@@ -88,6 +132,7 @@ export async function POST(req: Request) {
         const reader = res.body!.getReader()
         let buffer = ''
         let latestConversationId = typeof conversationId === 'string' ? conversationId : ''
+        let assistantAnswer = ''
 
         function emit(payload: Record<string, unknown>) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
@@ -115,6 +160,7 @@ export async function POST(req: Request) {
           }
 
           if (typeof event.answer === 'string' && event.answer) {
+            assistantAnswer += event.answer
             emit({ type: 'chunk', answer: event.answer })
           }
 
@@ -147,6 +193,13 @@ export async function POST(req: Request) {
         } catch {
           emit({ type: 'error', error: '聊天服务暂时不可用，请稍后再试。' })
         } finally {
+          await saveSessionMessage({
+            userId,
+            sessionId,
+            role: 'assistant',
+            content: assistantAnswer,
+            sessionToken: current.sessionToken,
+          })
           controller.close()
         }
       },

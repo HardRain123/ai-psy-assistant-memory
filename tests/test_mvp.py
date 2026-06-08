@@ -125,12 +125,13 @@ class MvpApiTests(unittest.TestCase):
         self.assertEqual(allowed.status_code, 200)
         self.assertEqual(aggregate_missing.status_code, 401)
 
-    def test_new_user_first_status_creates_session(self):
+    def test_new_user_first_status_creates_pending_session(self):
         data = client.get("/session/status/new-user").json()
         for field in [
             "session_id",
             "status",
             "started_at",
+            "created_at",
             "ended_at",
             "elapsed_minutes",
             "remaining_minutes",
@@ -142,12 +143,18 @@ class MvpApiTests(unittest.TestCase):
             "can_start_new_session",
             "daily_limit_reached",
             "message",
+            "timer_started",
         ]:
             self.assertIn(field, data)
-        self.assertEqual(data["status"], "open")
+        self.assertEqual(data["status"], "pending")
+        self.assertIsNone(data["started_at"])
+        self.assertEqual(data["elapsed_minutes"], 0)
+        self.assertEqual(data["remaining_minutes"], 50)
+        self.assertEqual(data["session_stage"], "not_started")
         self.assertTrue(data["is_new_session"])
+        self.assertFalse(data["timer_started"])
         self.assertIsInstance(data["is_new_session_str"], str)
-        self.assertIn(data["session_stage"], {"trust", "deep", "reframe", "action", "ending", "ended"})
+        self.assertTrue(data["can_continue"])
 
     def test_dify_turn_prep_aggregates_session_context_transcript_and_care_plan(self):
         user_id = "turn-prep-user"
@@ -178,6 +185,43 @@ class MvpApiTests(unittest.TestCase):
         transcript = client.get(f"/session-transcript/{session_id}").json()
         self.assertIn(query, transcript["transcript_text"])
         self.assertEqual(client.get(f"/care-plan/{user_id}").json()["plan_text"], data["plan_text"])
+
+    def test_session_message_repairs_dify_utf8_mojibake(self):
+        user_id = "mojibake-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        original = "有时候我真的不想活了。"
+        mojibake = original.encode("utf-8").decode("latin1")
+
+        saved = client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": mojibake},
+        ).json()
+        self.assertTrue(saved["success"])
+        self.assertEqual(saved["risk_level"], "high")
+
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        self.assertIn(original, transcript["transcript_text"])
+        self.assertEqual(transcript["messages"][0]["content"], original)
+        self.assertNotIn("æ", transcript["messages"][0]["content"])
+
+    def test_session_history_returns_sessions_with_messages(self):
+        user_id = "history-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "hello"},
+        )
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "assistant", "content": "hi"},
+        )
+
+        history = client.get(f"/session-history/{user_id}").json()
+
+        self.assertEqual(history["sessions"][0]["session_id"], session_id)
+        self.assertEqual(history["sessions"][0]["message_count"], 2)
 
     def test_low_content_session_skips_summary_memory_and_formal_handoff(self):
         user_id = "low-content-user"
@@ -224,12 +268,31 @@ class MvpApiTests(unittest.TestCase):
         self.assertIn("hypotheses", low_doc["content"])
         self.assertIn("action_plan", low_doc["content"])
 
-    def test_existing_open_session_returns_same_session(self):
+    def test_existing_pending_session_returns_same_session_until_first_message(self):
         first = client.get("/session/status/open-user").json()
         second = client.get("/session/status/open-user").json()
         self.assertEqual(first["session_id"], second["session_id"])
-        self.assertEqual(second["status"], "open")
+        self.assertEqual(second["status"], "pending")
         self.assertFalse(second["is_new_session"])
+        self.assertFalse(second["timer_started"])
+
+    def test_first_user_message_starts_pending_session_timer(self):
+        user_id = "first-message-start-user"
+        pending = client.get(f"/session/status/{user_id}").json()
+        session_id = pending["session_id"]
+
+        saved = client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "hello"},
+        ).json()
+        current = client.get(f"/session/status/{user_id}").json()
+
+        self.assertTrue(saved["success"])
+        self.assertEqual(current["session_id"], session_id)
+        self.assertEqual(current["status"], "open")
+        self.assertTrue(current["timer_started"])
+        self.assertIsNotNone(current["started_at"])
+        self.assertIn(current["session_stage"], {"trust", "deep", "reframe", "action", "ending"})
 
     def test_manual_finalize_uses_actual_end_time(self):
         user_id = "manual-finalize-user"
@@ -284,14 +347,15 @@ class MvpApiTests(unittest.TestCase):
         docs = client.get(f"/handoff/session/{session_id}").json()["documents"]
         self.assertEqual(len([doc for doc in docs if doc["format"] == "markdown"]), 1)
 
-    def test_yesterday_open_session_auto_ends_and_new_session_starts(self):
+    def test_yesterday_open_session_auto_ends_and_new_pending_session_is_ready(self):
         old = client.get("/session/status/yesterday-user").json()
         old_session_id = old["session_id"]
         make_latest_session_expired("yesterday-user", days_ago=1)
 
         current = client.get("/session/status/yesterday-user").json()
-        self.assertEqual(current["status"], "open")
+        self.assertEqual(current["status"], "pending")
         self.assertTrue(current["is_new_session"])
+        self.assertFalse(current["timer_started"])
         self.assertNotEqual(current["session_id"], old_session_id)
 
         with transaction() as cur:
@@ -708,22 +772,17 @@ class MvpApiTests(unittest.TestCase):
         dsl_path = latest_dsl_path()
         dsl_text = dsl_path.read_text(encoding="utf-8")
         yaml.safe_load(dsl_text)
-        self.assertIn("/session/status", dsl_text)
+        self.assertIn("/dify/turn-prep", dsl_text)
         self.assertIn("session_stage", dsl_text)
         self.assertIn("risk_level", dsl_text)
-        self.assertIn("低内容", dsl_text)
-        self.assertIn("暂停原议题", dsl_text)
-        self.assertIn("先修复关系", dsl_text)
-        self.assertIn("心理线", dsl_text)
-        self.assertIn("行动线", dsl_text)
-        self.assertIn("用户只是说“困了”“好困”“有点累”“状态不好”，不等于结束", dsl_text)
-        self.assertIn("fatigue_without_explicit_end", dsl_text)
-        self.assertIn("Finalize Session", dsl_text)
-        self.assertIn("纵向咨询事件回应原则", dsl_text)
-        self.assertIn("当用户反馈任务未完成时", dsl_text)
-        self.assertIn("当用户表达连续几天或多次完成小动作时", dsl_text)
-        self.assertIn("当用户表达总结、阶段结束、下一阶段或交接时", dsl_text)
-        self.assertNotIn("更改保存标签", dsl_text)
+        for marker in [
+            "/session-message",
+            "transcript_text",
+            "user_message_saved",
+            "fatigue_without_explicit_end",
+            "Finalize Session",
+        ]:
+            self.assertIn(marker, dsl_text)
         self.assertNotIn("sk-", dsl_text.lower())
 
     def test_dify_end_intent_parse_keeps_fatigue_only_open(self):

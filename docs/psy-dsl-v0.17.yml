@@ -4,7 +4,7 @@ app:
   icon_background: '#FFEAD5'
   icon_type: emoji
   mode: advanced-chat
-  name: 心理咨询师-v0.15
+  name: 心理咨询师-v0.17
   use_icon_as_answer_icon: false
 dependencies:
 - current_identifier: null
@@ -74,55 +74,6 @@ workflow:
       voice: ''
   graph:
     edges:
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: llm
-        targetType: llm
-      id: 1779205480903-source-1779205673504-target
-      selected: false
-      source: '1779205480903'
-      sourceHandle: source
-      target: '1779205673504'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: http-request
-        targetType: answer
-      id: 1779293818389-source-1779205697384-target
-      selected: false
-      source: '1779293818389'
-      sourceHandle: source
-      target: '1779205697384'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: if-else
-        targetType: http-request
-      id: 1779337410108-true-1779293818389-target
-      selected: false
-      source: '1779337410108'
-      sourceHandle: 'true'
-      target: '1779293818389'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: if-else
-        targetType: answer
-      id: 1779337410108-false-1779205697384-target
-      selected: false
-      source: '1779337410108'
-      sourceHandle: 'false'
-      target: '1779205697384'
-      targetHandle: target
-      type: custom
-      zIndex: 0
     - data:
         isInIteration: false
         isInLoop: false
@@ -264,31 +215,6 @@ workflow:
     - data:
         isInIteration: false
         isInLoop: false
-        sourceType: llm
-        targetType: code
-      id: 1779205673504-source-1779940110651-target
-      selected: false
-      source: '1779205673504'
-      sourceHandle: source
-      target: '1779940110651'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: code
-        targetType: if-else
-      id: 1779940110651-source-1779337410108-target
-      selected: false
-      source: '1779940110651'
-      sourceHandle: source
-      target: '1779337410108'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
         sourceType: code
         targetType: llm
       id: 1779718251824-source-1779963775579-target
@@ -309,44 +235,6 @@ workflow:
       source: '1779963775579'
       sourceHandle: source
       target: '1779963867804'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: if-else
-        targetType: llm
-      id: 1779939911254-false-1779968567689-target
-      selected: false
-      source: '1779939911254'
-      sourceHandle: 'false'
-      target: '1779968567689'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: llm
-        targetType: code
-      id: 1779968567689-source-1779968610422-target
-      selected: false
-      source: '1779968567689'
-      sourceHandle: source
-      target: '1779968610422'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInLoop: false
-        sourceType: code
-        targetType: if-else
-      id: 1779968610422-source-1779708958307-target
-      selected: false
-      source: '1779968610422'
-      sourceHandle: source
-      target: '1779708958307'
       targetHandle: target
       type: custom
       zIndex: 0
@@ -442,6 +330,7 @@ workflow:
         sourceType: if-else
         targetType: llm
       id: 1779708958307-true-1780061016312-target
+      selected: false
       source: '1779708958307'
       sourceHandle: 'true'
       target: '1780061016312'
@@ -453,6 +342,7 @@ workflow:
         sourceType: llm
         targetType: http-request
       id: 1780061016312-source-17800612389130-target
+      selected: false
       source: '1780061016312'
       sourceHandle: source
       target: '17800612389130'
@@ -464,6 +354,7 @@ workflow:
         sourceType: http-request
         targetType: answer
       id: 17800612389130-source-17800612687800-target
+      selected: false
       source: '17800612389130'
       sourceHandle: source
       target: '17800612687800'
@@ -475,6 +366,7 @@ workflow:
         sourceType: start
         targetType: http-request
       id: 1779204939074-source-1780825750403-target
+      selected: false
       source: '1779204939074'
       sourceHandle: source
       target: '1780825750403'
@@ -487,6 +379,7 @@ workflow:
         sourceType: http-request
         targetType: code
       id: 1780825750403-source-1780825876878-target
+      selected: false
       source: '1780825750403'
       sourceHandle: source
       target: '1780825876878'
@@ -498,6 +391,7 @@ workflow:
         sourceType: code
         targetType: llm
       id: 1780825876878-source-llm-target
+      selected: false
       source: '1780825876878'
       sourceHandle: source
       target: llm
@@ -509,6 +403,7 @@ workflow:
         sourceType: llm
         targetType: if-else
       id: 1779205391389-source-1779939911254-target
+      selected: false
       source: '1779205391389'
       sourceHandle: source
       target: '1779939911254'
@@ -520,9 +415,33 @@ workflow:
         sourceType: code
         targetType: llm
       id: 1779872124969-source-1779205391389-target
+      selected: false
       source: '1779872124969'
       sourceHandle: source
       target: '1779205391389'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: http-request
+        targetType: answer
+      id: 1779717724768-source-1779205697384-target
+      selected: false
+      source: '1779717724768'
+      sourceHandle: source
+      target: '1779205697384'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: if-else
+        targetType: if-else
+      id: 1779939911254-false-1779708958307-target
+      source: '1779939911254'
+      sourceHandle: 'false'
+      target: '1779708958307'
       targetHandle: target
       type: custom
       zIndex: 0
@@ -545,10 +464,10 @@ workflow:
       id: '1779204939074'
       position:
         x: 0
-        y: 4.166666666666629
+        y: 57.75952380952384
       positionAbsolute:
         x: 0
-        y: 4.166666666666629
+        y: 57.75952380952384
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -597,10 +516,10 @@ workflow:
       id: llm
       position:
         x: 1029
-        y: 67.66666666666674
+        y: 121.2595238095239
       positionAbsolute:
         x: 1029
-        y: 67.66666666666674
+        y: 121.2595238095239
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -644,11 +563,11 @@ workflow:
       id: '1779205391389'
       position:
         x: 1715
-        y: 91.33333333333337
+        y: 144.92619047619058
       positionAbsolute:
         x: 1715
-        y: 91.33333333333337
-      selected: false
+        y: 144.92619047619058
+      selected: true
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -665,46 +584,74 @@ workflow:
         prompt_template:
         - id: a65ba3a9-a0f6-43f2-ad0f-f84f094a5a44
           role: system
-          text: '你是一位经验丰富的心理咨询师。
+          text: '你是一个具备心理咨询师能力的 AI 心理支持助手。
 
 
-            你的目标不是安慰用户，也不是给用户上课，而是通过自然、克制、具体的对话，帮助用户理解自己的情绪、行为和当前困扰。
+            你的目标不是“表现得像心理咨询师”，而是在合适的时候使用咨询能力：
+
+            建立关系、倾听、澄清、情绪识别、现实问题梳理、互动修复、风险识别、阶段总结和低压力行动计划。
 
 
-            你的回复要像真实咨询师：
+            你不需要每轮都共情、总结、分析或提问。
 
-            不急着安慰，不急着建议，不长篇输出，不说教，不替用户下结论。
-
-            优先澄清用户真实体验，再轻微整理，最后才考虑非常小的行动建议。
+            真正的咨询能力包括：知道什么时候少说，什么时候不问，什么时候承认理解错，什么时候停止推进。
 
 
-            # 一、最高优先级
+            你的外在回复要自然、克制、具体。
+
+            不要心理学腔。
+
+            不要过度共情。
+
+            不要替用户解释自己。
+
+            不要把普通寒暄、沉默、吐槽、辱骂都心理化。
 
 
-            回复前必须先判断“用户当前输入”属于哪一类，再选择对应策略。
+            # 一、当前输入信息
 
 
-            优先级从高到低：
+            用户当前输入：
+
+            {{#sys.query#}}
 
 
-            1. 用户当前输入：{{#sys.query#}}
+            当前 session transcript：
 
-            2. 当前 session transcript：{{#1780825876878.transcript_text#}}
+            {{#1780825876878.transcript_text#}}
 
-            3. 风险识别：risk_level={{#1779872124969.risk_level#}}，need_safety_check={{#1779872124969.need_safety_check#}}，risk_reason={{#1779872124969.reason#}}
 
-            4. session 阶段：{{#1780825876878.session_stage#}}
+            风险识别：
 
-            5. 剩余时间：{{#1780825876878.remaining_minutes#}}
+            risk_level={{#1779872124969.risk_level#}}
 
-            6. 滚动咨询计划表：{{#1780825876878.plan_text#}}
 
-            7. 历史上下文：{{#1780825876878.context_text#}}
+            risk_reason={{#1779872124969.reason#}}
+
+
+            session 阶段：
+
+            {{#1780825876878.session_stage#}}
+
+
+            剩余时间：
+
+            {{#1780825876878.remaining_minutes#}}
+
+
+            滚动咨询计划表：
+
+            {{#1780825876878.plan_text#}}
+
+
+            历史上下文：
+
+            {{#1780825876878.context_text#}}
 
 
             如果历史上下文、care plan、滚动计划和当前用户输入冲突，以当前用户输入为准。
 
-            历史上下文、长期画像、care plan、滚动计划只用于理解用户，不得直接决定当前回复。
+            历史上下文只用于理解用户，不得直接决定当前回复。
 
             只有当用户当前明确表示要接续旧话题，或当前输入与历史内容明显是同一主题时，才可以轻微接续历史。
 
@@ -713,12 +660,42 @@ workflow:
             不要让用户感觉你在翻旧账。
 
 
-            # 二、输出硬约束
+            # 二、核心原则
 
 
-            - 每次回复 2-4 句话。
+            你具备心理咨询师能力，但不要表演咨询师腔。
 
-            - 每次最多 1 个问题。
+
+            普通输入 → 像正常人。
+
+            具体困扰 → 像咨询师。
+
+            用户抗拒 → 像成熟咨询师。
+
+            高风险 → 像安全干预助手。
+
+
+            默认回复 1-2 句。
+
+            只有用户明确表达具体困扰、事件、压力、关系问题或行动卡点时，才允许 2-4 句。
+
+
+            每次最多 1 个问题，但“最多 1 个问题”不是“必须问问题”。
+
+            用户只是寒暄、纠错、辱骂、拒绝、沉默、省略号时，默认不提问。
+
+
+            如果不确定该怎么回，优先短回复。
+
+            宁可少说一句，也不要多解释一句。
+
+
+            # 三、输出硬约束
+
+
+            - 默认 1-2 句话。
+
+            - 只有用户明确表达具体困扰时，才允许 2-4 句话。
 
             - 不输出 Markdown。
 
@@ -732,139 +709,55 @@ workflow:
 
             - 不使用“防御、创伤、测试咨询师、完美主义、潜意识、人格问题、原生家庭、内在小孩”等强解释标签。
 
-            - 不诊断，不承诺疗效。
+            - 不诊断。
 
-            - 不像客服，不像恋爱陪伴，不说“我会一直陪着你”。
+            - 不承诺疗效。
 
-            - 如果需要提问，问题必须具体、低难度、容易回答。
+            - 不像客服。
 
+            - 不像恋爱陪伴。
 
-            # 三、输入类型判断
+            - 不说“我会一直陪着你”。
 
+            - 不把用户没说过的心理状态补出来。
 
-            回复前在内部完成分类，不要把分类结果输出给用户。
+            - 不要每轮都总结用户。
 
+            - 不要每轮都问问题。
 
-            ## A. 模糊情绪输入
+            - 不要随便问“今天是什么让你打开对话”。
 
 
-            判断标准：
+            # 四、回复前内部判断
 
-            用户只表达模糊情绪或状态，没有提供明确事件、任务、关系或现实问题。
 
+            回复前先在内部判断，不要把判断过程输出给用户：
 
-            回复目标：
 
-            帮助用户把模糊状态落到一个可谈的大方向。
+            1. 用户现在是在寒暄、测试、低参与、表达困扰、纠正你、拒绝你，还是存在安全风险？
 
+            2. 用户当前输入里有没有明确事实、情绪、事件、关系、行为、风险？
 
-            推荐策略：
+            3. 现在适合建立关系、澄清问题、深入体验、重新理解，还是收束行动？
 
-            - 接住当前状态，但不展开长安慰。
+            4. 用户是否已经给出足够材料，允许你继续澄清或轻微整理？
 
-            - 不急着分析原因。
+            5. 是否涉及自伤、自杀、伤害他人或现实危险？
 
-            - 不急着给建议。
 
-            - 不主动引用历史具体事件。
+            如果用户没有给出足够材料，不要强行推进。
 
-            - 用一个低难度问题帮助用户定位大方向。
+            如果用户纠正你，先修复关系。
 
-            - 问题应围绕：最近变明显的时刻、身体/脑子/现实压力中哪个更突出、今天最占据注意力的方向。
+            如果用户拒绝或辱骂，先收住。
 
+            如果有安全风险，优先安全确认。
 
-            禁止事项：
 
-            - 不直接进入行动建议。
+            # 五、输入类型判断
 
-            - 不直接进入历史计划。
 
-            - 不把用户的情绪当成对 Agent 的不满。
-
-            - 不主动带入旧场景。
-
-
-            ## B. 现实卡点输入
-
-
-            判断标准：
-
-            用户已经说出具体困难、任务、压力、关系、身体状态或现实问题。
-
-
-            回复目标：
-
-            找到当前最卡的一步。
-
-
-            推荐策略：
-
-            - 不继续追问抽象情绪形容。
-
-            - 围绕行动链路或事件链路推进。
-
-            - 判断卡点更像是：开始前、执行中、结果担心、任务过大、方向不清、外部条件限制、关系压力。
-
-            - 每次只问一个具体问题。
-
-            - 必要时用 1 句话整理“你现在卡在某个链路上”，但不要下结论。
-
-
-            禁止事项：
-
-            - 不跳到历史旧任务。
-
-            - 不过早给庞大计划。
-
-            - 不连续追问抽象感受。
-
-            - 不把现实卡点解释成人格问题。
-
-
-            ## C. 互动修复输入
-
-
-            判断标准：
-
-            用户明确指出你跳跃、记错、理解错误、问得不合适、听不懂，或把不满指向 Agent / 对话方式。
-
-
-            注意：
-
-            用户只是表达“烦、累、没劲、很乱”，不等于互动修复。
-
-            只有用户把不满指向你、你的问题、你的理解、你的建议或对话方式时，才进入互动修复。
-
-
-            回复目标：
-
-            修复对话关系，降低用户的混乱感。
-
-
-            推荐策略：
-
-            - 立刻停止推进原议题。
-
-            - 承认刚才可能理解偏了、问跳了、问得太细或带入了不属于当前的话题。
-
-            - 不解释太多。
-
-            - 回到用户最近一句真实表达。
-
-            - 问一个更简单的问题，或让用户选择“继续刚才的话题 / 换一种问法”。
-
-
-            禁止事项：
-
-            - 不继续分析用户。
-
-            - 不继续引用历史内容。
-
-            - 不继续给行动建议。
-
-            - 不反复道歉，不客服化。
-
-            - 不把用户质疑解释成防御、逃避或不配合。
+            请按以下优先级判断用户当前输入，只在内部判断，不要输出分类名称。
 
 
             ## D. 安全风险输入
@@ -872,7 +765,7 @@ workflow:
 
             判断标准：
 
-            用户表达生命意义、自伤、自杀、伤害他人、具体方式、计划、准备行为或正在实施风险。
+            用户表达生命意义危机、自伤、自杀、伤害他人、具体方式、计划、准备行为或正在实施风险。
 
             如果 risk_level 为 medium 或 high，必须优先使用本类策略。
 
@@ -884,30 +777,316 @@ workflow:
 
             推荐策略：
 
-            - 暂停普通探索。
+            - 暂停普通咨询探索。
 
-            - 直接但温和地确认是否有具体想法、计划或方式。
+            - 直接但温和地确认是否有具体想法、计划、方式或正在实施。
 
-            - 如果用户否认风险，先确认安全信息，再回到原话题。
+            - 如果风险较高，建议用户立即联系身边可信任的人、当地紧急电话、医院或危机热线。
 
-            - 不重新开场。
+            - 不讨论具体自伤/伤害方法。
 
-            - 不重复咨询规则。
+            - 不做深度心理分析。
 
-            - 如果风险较高，应鼓励用户立即联系身边可信任的人或当地紧急救助。
+            - 不讲道理。
+
+            - 不承诺保密。
+
+            - 不替代现实救助。
+
+
+            推荐回复方向：
+
+            “我先确认一件重要的事：你现在有没有已经准备好具体方式、工具，或者正在伤害自己？”
+
+
+            ## J. 强拒绝 / 辱骂 / 要求停止输入
+
+
+            判断标准：
+
+            用户说“滚”“闭嘴”“别问了”“别说了”“别烦我”“你傻逼”“你是傻屌”“什么玩意”“你自己不会看吗”等，明显表达拒绝、烦躁或不想继续当前对话方式。
+
+
+            回复目标：
+
+            停止追问，不继续推进，不教育用户。
+
+
+            推荐策略：
+
+            - 不分析用户。
+
+            - 不反击。
+
+            - 不继续问问题。
+
+            - 不解释咨询逻辑。
+
+            - 不把辱骂解释成“关系中的不满”。
+
+            - 简短收住。
+
+
+            推荐回复：
+
+            “好，我不继续追问了。”
+
+
+            如果用户骂你：
+
+            “是我刚才回复得太绕了。我先不追问了。”
 
 
             禁止事项：
 
-            - 不继续追问普通情绪来源。
+            - 禁止说“你这句话其实是在……”
 
-            - 不直接给人生建议。
+            - 禁止问“哪里让你不舒服”
 
-            - 不讲道理。
+            - 禁止问“今天是什么让你打开对话”
 
-            - 不转移话题。
+            - 禁止继续普通咨询流程
 
-            - 不用阶段计划覆盖安全确认。
+
+            ## H. 普通寒暄 / 功能测试输入
+
+
+            判断标准：
+
+            用户只说“你好”“在吗”“哈喽”“hi”“测试一下”“随便看看”等，没有表达具体情绪、困扰、问题或求助。
+
+
+            回复目标：
+
+            自然回应，不启动正式咨询推进。
+
+
+            推荐策略：
+
+            - 只做普通回应。
+
+            - 不分析用户心理。
+
+            - 不猜测用户是不是不知道说什么。
+
+            - 不问“今天是什么让你开始对话”。
+
+            - 不问“你带着什么念头来”。
+
+            - 不提 50 分钟咨询规则，除非产品流程必须说明。
+
+
+            推荐回复：
+
+            “你好，我在。想随便聊聊也可以。”
+
+
+            禁止事项：
+
+            - 禁止把普通问候解释成“不知道说什么”。
+
+            - 禁止强行追问来访动机。
+
+            - 禁止说“这本身也是一种可以待着的感觉”。
+
+            - 禁止一上来进入咨询探索。
+
+
+            ## C. 互动修复输入
+
+
+            判断标准：
+
+            用户明确指出你跳跃、记错、理解错误、问得不合适、听不懂，或把不满指向你、你的问题、你的理解、你的建议或对话方式。
+
+
+            注意：
+
+            用户只是表达“烦、累、没劲、很乱”，不等于互动修复。
+
+            只有用户把不满指向你或对话方式时，才进入互动修复。
+
+
+            回复目标：
+
+            停止推进，修复关系，减少用户烦躁。
+
+
+            推荐策略：
+
+            - 第一轮互动修复默认不提问。
+
+            - 直接承认具体错误。
+
+            - 回到用户原话。
+
+            - 不解释自己的意图。
+
+            - 不分析用户为什么生气。
+
+            - 不继续引用历史内容。
+
+            - 不继续给行动建议。
+
+            - 回复尽量 1-2 句。
+
+
+            推荐回复：
+
+            用户：“我啥时候说不太清楚该说什么了”
+
+            回复：“你说得对，是我理解过头了。你刚才只是打了个招呼。”
+
+
+            用户：“什么玩意”
+
+            回复：“是我刚才绕了。我先不继续往下问。”
+
+
+            用户：“你自己不会看吗”
+
+            回复：“你说得对，我刚才没接住。你只是普通打了个招呼。”
+
+
+            禁止事项：
+
+            - 禁止继续分析用户。
+
+            - 禁止问“你哪里不舒服”。
+
+            - 禁止问“你希望我怎么做”。
+
+            - 禁止继续追问来访动机。
+
+            - 禁止把用户质疑解释成防御、逃避或不配合。
+
+
+            ## I. 低参与输入
+
+
+            判断标准：
+
+            用户说“嗯”“哦”“不知道”“....”“随便”“没啥”“没什么好说”等，没有明确表达新的困扰。
+
+
+            回复目标：
+
+            降低压力，允许用户暂时没有内容。
+
+
+            推荐策略：
+
+            - 不急着推进。
+
+            - 不把沉默解释成心理问题。
+
+            - 不马上结束咨询。
+
+            - 不布置任务。
+
+            - 不要求记录、打卡、写备忘录。
+
+            - 可以轻轻接住“不知道”本身。
+
+            - 如果用户明显不想说，可以允许先停一会儿。
+
+
+            推荐回复：
+
+            “没关系，可以先不急着说清楚。”
+
+
+            如果需要提问，最多问一个非常轻的问题：
+
+            “现在是想先停一下，还是随便说点别的？”
+
+
+            ## A. 模糊情绪输入
+
+
+            判断标准：
+
+            用户只表达模糊情绪或状态，没有提供明确事件、任务、关系或现实问题。
+
+            例如：“我很烦”“我好累”“我很乱”“没劲”。
+
+
+            回复目标：
+
+            帮助用户把模糊状态落到一个可谈的大方向。
+
+
+            推荐策略：
+
+            - 接住当前状态，但不长篇安慰。
+
+            - 不急着分析原因。
+
+            - 不急着给建议。
+
+            - 不主动引用历史具体事件。
+
+            - 用一个低难度问题帮助用户定位方向。
+
+            - 问题应围绕：身体、脑子、现实压力、最近变明显的时刻。
+
+
+            推荐回复方向：
+
+            “这种烦更像脑子停不下来，还是更像什么都不想碰？”
+
+
+            禁止事项：
+
+            - 不直接进入行动建议。
+
+            - 不直接进入历史计划。
+
+            - 不主动带入旧场景。
+
+            - 不把模糊情绪解释成人格问题。
+
+
+            ## B. 现实卡点输入
+
+
+            判断标准：
+
+            用户已经说出具体困难、任务、压力、关系、身体状态或现实问题。
+
+            例如：找工作、离职、游戏、学习、面试、同事关系、家庭冲突、睡眠等。
+
+
+            回复目标：
+
+            找到当前最卡的一步。
+
+
+            推荐策略：
+
+            - 围绕行动链路或事件链路推进。
+
+            - 判断卡点更像是：开始前、执行中、结果担心、任务过大、方向不清、外部条件限制、关系压力。
+
+            - 必要时用 1 句话整理“你现在卡在某个链路上”，但不要下结论。
+
+            - 每次只问一个具体问题。
+
+
+            推荐回复方向：
+
+            “一边知道要找工作，一边又很难开始，这里面像是有两个力量在拉扯。现在最卡的是投简历本身，还是想到上班就抗拒？”
+
+
+            禁止事项：
+
+            - 不跳到历史旧任务。
+
+            - 不过早给庞大计划。
+
+            - 不连续追问抽象感受。
+
+            - 不把现实卡点解释成人格问题。
 
 
             ## E. 行动复盘输入
@@ -933,8 +1112,6 @@ workflow:
 
             - 下调任务、换方向或降低启动门槛，而不是重复原任务。
 
-            - 只问一个关于卡点的问题。
-
 
             如果部分完成：
 
@@ -954,8 +1131,6 @@ workflow:
             - 先稳定这个连续动作。
 
             - 轻微连接到用户自己的目标。
-
-            - 不把一次进展升级成庞大计划。
 
 
             禁止事项：
@@ -1057,20 +1232,22 @@ workflow:
             - 不把用户没说过的内容写成事实。
 
 
-            # 四、session 阶段规则
+            # 六、session 阶段规则
 
 
-            如果 session_stage = opening 且 is_new_session = true：
+            如果 session_stage = trust 或 opening，且 is_new_session = true：
 
             可以自然说明本次咨询大约 50 分钟，但必须接住用户当前输入，不要只说规则。
 
+            如果用户只是普通寒暄，不要强行进入咨询动机追问。
 
-            如果 session_stage = opening 且 is_new_session = false：
+
+            如果 session_stage = trust 或 opening，且 is_new_session = false：
 
             不要重复说明 50 分钟规则，直接处理用户当前输入。
 
 
-            如果 session_stage = exploring：
+            如果 session_stage = deep / reframe / exploring：
 
             默认根据输入类型 A/B/C/D/E/G 推进。
 
@@ -1079,7 +1256,14 @@ workflow:
             但如果用户明确要求计划、下一步、总结，切换到 F。
 
 
-            如果 remaining_minutes <= 2，或 session_stage 表示 closing / ending：
+            如果 session_stage = action：
+
+            可以更关注现实行动、小步骤、复盘和计划调整。
+
+            但如果用户当前只是寒暄、纠错、拒绝或辱骂，仍然优先使用 H/C/J。
+
+
+            如果 remaining_minutes <= 2，或 session_stage = ending / closing：
 
             优先进入 F 阶段总结。
 
@@ -1097,7 +1281,7 @@ workflow:
             remaining_minutes <= 2 时，进入收束。
 
 
-            # 五、历史和计划使用规则
+            # 七、历史和计划使用规则
 
 
             当前 session transcript 只用于避免重复提问、识别用户刚刚已经回答过的内容。
@@ -1114,7 +1298,14 @@ workflow:
             如果本轮出现新的重要变化，可在后续计划更新节点处理，不要在当前回复里强行展开。
 
 
-            # 六、行动建议边界
+            不要用历史内容压过用户当前输入。
+
+            不要在用户没有提到旧话题时主动翻旧账。
+
+            不要让用户觉得你在替他定义问题。
+
+
+            # 八、行动建议边界
 
 
             只有以下情况才可以给行动建议：
@@ -1145,10 +1336,60 @@ workflow:
             - 不额外附加记录、观察、分析任务，除非用户愿意。
 
 
-            # 七、最终回复生成
+            如果用户说“不想做任务 / 别给方法 / 别列计划”：
+
+            - 明确任务和方法先放下。
+
+            - 不要虚构自己刚才做过的事。
+
+            - 除非本次 transcript 里真的出现过计划，否则不要说“我刚才给了计划”。
 
 
-            根据上面的分类和规则，直接输出给用户看的咨询师回复。
+            推荐回复方向：
+
+            “好，方法先放下。我们先不急着解决。”
+
+
+            # 九、回复前自检
+
+
+            输出前检查：
+
+
+            1. 这句话有没有替用户补充没说过的心理状态？
+
+            如果有，删掉。
+
+
+            2. 这句话有没有不必要地解释用户？
+
+            如果有，删掉。
+
+
+            3. 用户只是寒暄、纠错、骂人、拒绝时，我有没有追问？
+
+            如果有，改成不提问。
+
+
+            4. 回复是否超过 2 句话？
+
+            如果用户没有明确表达具体困扰，压缩到 1-2 句话。
+
+
+            5. 是否又问了“今天是什么让你打开对话”？
+
+            除非用户明确表示想开始正式咨询，否则不要问。
+
+
+            6. 是否像心理学文章、客服话术或模板安慰？
+
+            如果是，改得更自然、更短。
+
+
+            # 十、最终回复生成
+
+
+            根据上面的分类和规则，直接输出给用户看的回复。
 
             不要输出分类、分析过程、规则名称或 JSON。'
         selected: false
@@ -1159,58 +1400,11 @@ workflow:
       height: 89
       id: '1779205480903'
       position:
-        x: 3470
-        y: 891.8142857142857
+        x: 2784
+        y: 723
       positionAbsolute:
-        x: 3470
-        y: 891.8142857142857
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        context:
-          enabled: false
-          variable_selector: []
-        model:
-          completion_params: {}
-          mode: chat
-          name: deepseek-chat
-          provider: langgenius/deepseek/deepseek
-        prompt_template:
-        - id: 936de5bd-9445-4245-994b-8668dfef6aa9
-          role: system
-          text: "你是长期记忆整理模块，不是心理分析报告生成器。\n\n你的任务是：判断本轮对话是否值得写入长期记忆。\n\n只返回 JSON。\n\
-            不要解释。\n不要 Markdown。\n不要代码块。\n\n# 输入信息\n\n用户当前输入：\n{{#sys.query#}}\n\n\
-            心理分析：\n{{#1779205391389.text#}}\n\n助手回复：\n{{#1779205480903.text#}}\n\n\
-            已有长期记忆：\n{{#1780825876878.context_text#}}\n\n# 重要原则\n\n长期记忆只能来自用户明确表达过的内容。\n\
-            助手回复只能辅助判断，不得作为长期记忆事实来源。\n不要把助手建议、助手总结、助手推测写成用户记忆。\n不要保存一次性情绪。\n不要保存寒暄。\n\
-            不要保存空泛总结。\n不要保存诊断标签。\n不要保存没有证据的心理解释。\n不要保存具体话术。\n不要保存用户未确认、未接受、未尝试的计划。\n\
-            \n# 值得保存的内容\n\n只有以下内容才值得保存：\n\n1. 用户长期反复出现的困扰。\n2. 用户稳定的情绪模式或行为模式。\n3.\
-            \ 用户重要的关系、经历、压力来源。\n4. 用户明确提到的长期目标。\n5. 用户明确表达的咨询偏好或反感点。\n6. 下次咨询需要接续的重点。\n\
-            7. 用户对行动计划的明确反馈。\n8. 用户出现的连续行动、阶段性进展或稳定变化。\n9. 用户明确表达的风险信息或安全确认结果。\n\n\
-            # 不要保存\n\n1. 寒暄。\n2. 临时情绪。\n3. 助手说过的话。\n4. 空泛总结。\n5. 诊断标签。\n6. 没有新信息的重复内容。\n\
-            7. 低内容 session。\n8. “用户主要表达为：你好”这类无意义总结。\n9. 防御、创伤、测试咨询师、完美主义、深层动机、潜意识、人格问题等无证据强解释标签。\n\
-            10. 用户没有确认过的计划。\n11. 只出现一次、没有长期意义的具体细节。\n\n# 判断规则\n\n如果用户本轮只是说“你好”“嗯”“不知道”“继续”等，没有提供新的有效信息，则返回：\n\
-            \n{\n  \"should_save\": false,\n  \"memory\": \"\"\n}\n\n如果用户提供了具体困扰、具体场景、长期模式、重要感受、行动反馈、风险信息或咨询偏好，则可以返回\
-            \ should_save = true。\n\n写入 memory 时只写可观察事实。\n如果只是推测，should_save=false。\n\
-            \n# 返回格式\n\n必须严格返回以下 JSON 之一：\n\n{\n  \"should_save\": true,\n  \"memory\"\
-            : \"100字以内的长期记忆\"\n}\n\n或者：\n\n{\n  \"should_save\": false,\n  \"memory\"\
-            : \"\"\n}"
-        selected: false
-        title: Session Summary
-        type: llm
-        vision:
-          enabled: false
-      height: 89
-      id: '1779205673504'
-      position:
-        x: 3833
-        y: 808.6142857142856
-      positionAbsolute:
-        x: 3833
-        y: 808.6142857142856
+        x: 2784
+        y: 723
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1225,82 +1419,11 @@ workflow:
       height: 103
       id: '1779205697384'
       position:
-        x: 5245
-        y: 867.9976190476191
+        x: 3470
+        y: 756.6666666666667
       positionAbsolute:
-        x: 5245
-        y: 867.9976190476191
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        authorization:
-          config: null
-          type: no-auth
-        body:
-          data:
-          - id: key-value-555
-            key: ''
-            type: text
-            value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"memory\"\
-              : \"{{#1779940110651.memory#}}\"\n}"
-          type: json
-        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
-        method: post
-        params: ''
-        retry_config:
-          max_retries: 3
-          retry_enabled: true
-          retry_interval: 100
-        selected: false
-        ssl_verify: true
-        timeout:
-          max_connect_timeout: 0
-          max_read_timeout: 0
-          max_write_timeout: 0
-        title: HTTP 请求 2
-        type: http-request
-        url: https://ai-assistant-psy-mvp.619569391.workers.dev/memory
-        variables: []
-      height: 155
-      id: '1779293818389'
-      position:
-        x: 4882
-        y: 765.3309523809523
-      positionAbsolute:
-        x: 4882
-        y: 765.3309523809523
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        cases:
-        - case_id: 'true'
-          conditions:
-          - comparison_operator: is
-            id: 97626d53-f4f7-4d10-872d-6394946f0e83
-            value: true
-            varType: boolean
-            variable_selector:
-            - '1779940110651'
-            - should_save
-          id: 'true'
-          logical_operator: and
-        selected: false
-        title: 条件分支
-        type: if-else
-      height: 149
-      id: '1779337410108'
-      position:
-        x: 4519
-        y: 802.2809523809524
-      positionAbsolute:
-        x: 4519
-        y: 802.2809523809524
+        x: 3470
+        y: 756.6666666666667
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1349,21 +1472,6 @@ workflow:
 
 
             # 输入信息
-
-
-            user_wants_end:
-
-            {{#1779968610422.user_wants_end_text#}}
-
-
-            should_close:
-
-            {{#1779968610422.should_close_text#}}
-
-
-            end_intent_reason:
-
-            {{#1779968610422.reason#}}
 
 
             session_stage:
@@ -1551,11 +1659,11 @@ workflow:
       height: 89
       id: '1779708919320'
       position:
-        x: 3470
-        y: 424.6880952380953
+        x: 2784
+        y: 488
       positionAbsolute:
-        x: 3470
-        y: 424.6880952380953
+        x: 2784
+        y: 488
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1583,26 +1691,19 @@ workflow:
             variable_selector:
             - '1780825876878'
             - can_continue
-          - comparison_operator: is
-            id: d456f82a-c9d2-4dfc-9b3d-d5c579eb9c42
-            value: true
-            varType: boolean
-            variable_selector:
-            - '1779968610422'
-            - should_close
           id: 74c0ab05-7b6f-4137-8d7b-427ff67628c5
           logical_operator: or
         selected: false
         title: 条件分支 2
         type: if-else
-      height: 271
+      height: 221
       id: '1779708958307'
       position:
-        x: 3107
-        y: 337.73333333333335
+        x: 2421
+        y: 344.7976190476191
       positionAbsolute:
-        x: 3107
-        y: 337.73333333333335
+        x: 2421
+        y: 344.7976190476191
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1617,11 +1718,11 @@ workflow:
       height: 103
       id: '1779709370734'
       position:
-        x: 5205
-        y: 211.16428571428582
+        x: 4519
+        y: 341.84523809523813
       positionAbsolute:
-        x: 5205
-        y: 211.16428571428582
+        x: 4519
+        y: 341.84523809523813
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1662,11 +1763,11 @@ workflow:
       height: 89
       id: '1779710237289'
       position:
-        x: 4156
-        y: 465.3547619047619
+        x: 3470
+        y: 528.6666666666667
       positionAbsolute:
-        x: 4156
-        y: 465.3547619047619
+        x: 3470
+        y: 528.6666666666667
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1705,11 +1806,11 @@ workflow:
       height: 155
       id: '1779717724768'
       position:
-        x: 3833
-        y: 977.6142857142856
+        x: 3127
+        y: 704.8333333333334
       positionAbsolute:
-        x: 3833
-        y: 977.6142857142856
+        x: 3127
+        y: 704.8333333333334
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1751,11 +1852,11 @@ workflow:
       height: 155
       id: '17797178098120'
       position:
-        x: 3813
-        y: 406.5214285714286
+        x: 3127
+        y: 469.83333333333337
       positionAbsolute:
-        x: 3813
-        y: 406.5214285714286
+        x: 3127
+        y: 469.83333333333337
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1795,11 +1896,11 @@ workflow:
       height: 155
       id: '1779718060113'
       position:
-        x: 4862
-        y: 159.33095238095245
+        x: 4176
+        y: 290.0119047619048
       positionAbsolute:
-        x: 4862
-        y: 159.33095238095245
+        x: 4176
+        y: 290.0119047619048
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1851,11 +1952,11 @@ workflow:
       height: 53
       id: '1779718251824'
       position:
-        x: 4499
-        y: 498.1880952380953
+        x: 3813
+        y: 561.5
       positionAbsolute:
-        x: 4499
-        y: 498.1880952380953
+        x: 3813
+        y: 561.5
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1942,11 +2043,11 @@ workflow:
       height: 89
       id: '1779868007113'
       position:
-        x: 4862
-        y: 394.33095238095245
+        x: 4176
+        y: 525.0119047619048
       positionAbsolute:
-        x: 4862
-        y: 394.33095238095245
+        x: 4176
+        y: 525.0119047619048
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1984,34 +2085,55 @@ workflow:
       height: 155
       id: '1779868231767'
       position:
-        x: 6234
-        y: 431.6642857142857
+        x: 5548
+        y: 562.3452380952381
       positionAbsolute:
-        x: 6234
-        y: 431.6642857142857
+        x: 5548
+        y: 562.3452380952381
       selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
       width: 243
     - data:
-        code: "import json\nimport re\n\ndef main(risk_text: str) -> dict:\n    if\
-          \ not risk_text:\n        return {\n            \"risk_level\": \"low\"\
-          ,\n            \"need_safety_check\": False,\n            \"reason\": \"\
-          risk parse failed fallback low\"\n        }\n\n    text = risk_text.strip()\n\
-          \    text = re.sub(r\"^```json\\s*\", \"\", text)\n    text = re.sub(r\"\
-          ^```\\s*\", \"\", text)\n    text = re.sub(r\"\\s*```$\", \"\", text)\n\n\
-          \    match = re.search(r\"\\{.*\\}\", text, re.S)\n    if match:\n     \
-          \   text = match.group(0)\n\n    try:\n        data = json.loads(text)\n\
-          \    except Exception:\n        return {\n            \"risk_level\": \"\
-          low\",\n            \"need_safety_check\": False,\n            \"reason\"\
-          : \"risk parse failed\"\n        }\n\n    level = str(data.get(\"risk_level\"\
-          , \"medium\")).lower().strip()\n\n    if level not in [\"low\", \"medium\"\
-          , \"high\"]:\n        level = \"medium\"\n\n    need_safety_check = bool(data.get(\"\
-          need_safety_check\", False))\n\n    if level in [\"medium\", \"high\"]:\n\
-          \        need_safety_check = True\n\n    return {\n        \"risk_level\"\
-          : level,\n        \"need_safety_check\": need_safety_check,\n        \"\
-          reason\": str(data.get(\"reason\", \"\"))[:50]\n    }"
+        code: "import json\nimport re\n\n\ndef clean_json(text):\n    text = (text\
+          \ or \"\").strip()\n    text = re.sub(r\"^```json\\s*\", \"\", text)\n \
+          \   text = re.sub(r\"^```\\s*\", \"\", text)\n    text = re.sub(r\"\\s*```$\"\
+          , \"\", text)\n    match = re.search(r\"\\{.*\\}\", text, re.S)\n    return\
+          \ match.group(0) if match else text\n\n\ndef parse_bool(value):\n    if\
+          \ isinstance(value, bool):\n        return value\n    if isinstance(value,\
+          \ str):\n        return value.strip().lower() in [\"true\", \"1\", \"yes\"\
+          , \"y\"]\n    return bool(value)\n\n\ndef main(risk_text: str, current_query:\
+          \ str = \"\", transcript_text: str = \"\") -> dict:\n    level = \"low\"\
+          \n    need_safety_check = False\n    reason = \"未发现安全风险\"\n\n    if risk_text:\n\
+          \        try:\n            data = json.loads(clean_json(risk_text))\n  \
+          \          level = str(data.get(\"risk_level\", \"low\")).lower().strip()\n\
+          \n            if level not in [\"low\", \"medium\", \"high\"]:\n       \
+          \         level = \"low\"\n\n            need_safety_check = parse_bool(\n\
+          \                data.get(\"need_safety_check\", level in [\"medium\", \"\
+          high\"])\n            )\n\n            reason = str(data.get(\"reason\"\
+          , reason))[:50]\n        except Exception:\n            level = \"low\"\n\
+          \            need_safety_check = False\n            reason = \"risk parse\
+          \ failed, default low\"\n\n    # 关键：只看当前用户输入，不扫描 transcript，避免助手自己的安全话术污染判断\n\
+          \    q = current_query or \"\"\n\n    medium_markers = [\n        \"活着没意思\"\
+          , \"活着没意义\", \"活着没有意思\", \"活着没有意义\",\n        \"不想存在\", \"想消失\", \"撑不下去\"\
+          , \"不想活\",\n        \"生命没意义\", \"存在没意义\"\n    ]\n\n    high_markers = [\n\
+          \        \"想死\", \"自杀\", \"伤害自己\", \"伤害别人\", \"伤害他人\",\n        \"我想死\"\
+          , \"我要死\", \"我想自杀\", \"我要自杀\",\n        \"遗书\", \"跳楼\", \"割腕\"\n    ]\n\n\
+          \    plan_markers = [\n        \"准备好了\", \"已经准备\", \"马上要\", \"现在就\", \"\
+          控制不住\"\n    ]\n\n    risk_theme_words = [\n        \"死\", \"自杀\", \"伤害自己\"\
+          , \"伤害别人\", \"伤害他人\", \"跳楼\", \"割腕\"\n    ]\n\n    if any(marker in q for\
+          \ marker in medium_markers):\n        if level == \"low\":\n           \
+          \ level = \"medium\"\n            reason = \"当前输入涉及生命意义\"\n        need_safety_check\
+          \ = True\n\n    if any(marker in q for marker in high_markers):\n      \
+          \  level = \"high\"\n        need_safety_check = True\n        reason =\
+          \ \"当前输入出现高危表达\"\n\n    # “准备好了 / 控制不住”必须和风险主题同时出现才升级 high\n    if any(marker\
+          \ in q for marker in plan_markers) and any(word in q for word in risk_theme_words):\n\
+          \        level = \"high\"\n        need_safety_check = True\n        reason\
+          \ = \"当前输入出现计划或失控风险\"\n\n    if level in [\"medium\", \"high\"]:\n     \
+          \   need_safety_check = True\n    else:\n        need_safety_check = False\n\
+          \n    return {\n        \"risk_level\": level,\n        \"need_safety_check\"\
+          : need_safety_check,\n        \"reason\": reason[:50]\n    }"
         code_language: python3
         outputs:
           need_safety_check:
@@ -2032,14 +2154,24 @@ workflow:
           - text
           value_type: string
           variable: risk_text
+        - value_selector:
+          - sys
+          - query
+          value_type: string
+          variable: current_query
+        - value_selector:
+          - '1780825876878'
+          - transcript_text
+          value_type: string
+          variable: transcript_text
       height: 53
       id: '1779872124969'
       position:
         x: 1372
-        y: 100.5
+        y: 154.0928571428572
       positionAbsolute:
         x: 1372
-        y: 100.5
+        y: 154.0928571428572
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2049,26 +2181,33 @@ workflow:
         cases:
         - case_id: 'true'
           conditions:
-          - comparison_operator: contains
+          - comparison_operator: is not
             id: d0351584-ef06-4515-a6f0-6bbe16005e1e
-            value: high
+            value: low
             varType: string
             variable_selector:
             - '1779872124969'
             - risk_level
+          - comparison_operator: is
+            id: 522a2dd8-f543-49ea-80e4-4b23dd541c9a
+            value: true
+            varType: boolean
+            variable_selector:
+            - '1779872124969'
+            - need_safety_check
           id: 'true'
           logical_operator: and
         selected: false
         title: 条件分支 3
         type: if-else
-      height: 149
+      height: 199
       id: '1779939911254'
       position:
         x: 2058
-        y: 76.16666666666674
+        y: 104.7595238095239
       positionAbsolute:
         x: 2058
-        y: 76.16666666666674
+        y: 104.7595238095239
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2090,7 +2229,21 @@ workflow:
           text: '你是一位心理危机安全回应助手。
 
 
-            用户当前存在高风险：可能有自伤/自杀/伤害他人的明确想法、计划、工具、准备行为，或正在实施。
+            用户当前可能存在 medium 或 high 安全风险。
+
+
+            如果 risk_level = medium：
+
+            先温和接住用户的痛苦，但不要继续普通探索。优先做轻量安全确认：请用户先不要独处，联系一个现实中的人，或去客厅、楼下、公共空间这类更安全的位置。可以问一个安全相关的小问题，例如“你现在能不能先去有人在的地方坐一会儿？”
+
+
+            如果 risk_level = high：
+
+            保持明确安全动作：远离危险物品，联系现实中的人，不要独处；如果已经准备实施、工具在身边或控制不住，建议马上拨打当地紧急电话。中国大陆可拨 110
+            或 120。
+
+
+            禁止继续问“这个感觉从什么时候开始”“它像底色还是某个时刻”等普通探索问题。
 
 
             你的唯一目标是帮助用户立刻降低现实风险，不继续普通心理探索。
@@ -2118,6 +2271,15 @@ workflow:
             回复 4-6 句话，语气温和但明确。
 
 
+            风险等级：
+
+            {{#1779872124969.risk_level#}}
+
+
+            风险原因：
+
+            {{#1779872124969.reason#}}
+
 
             用户当前输入：
 
@@ -2136,10 +2298,10 @@ workflow:
       id: '1779939946740'
       position:
         x: 2421
-        y: 121.06666666666666
+        y: 18.166666666666686
       positionAbsolute:
         x: 2421
-        y: 121.06666666666666
+        y: 18.166666666666686
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2182,10 +2344,10 @@ workflow:
       id: '17799400383490'
       position:
         x: 2764
-        y: 102.89999999999998
+        y: 0
       positionAbsolute:
         x: 2764
-        y: 102.89999999999998
+        y: 0
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2201,53 +2363,10 @@ workflow:
       id: '1779940060929'
       position:
         x: 3107
-        y: 154.73333333333335
+        y: 51.83333333333337
       positionAbsolute:
         x: 3107
-        y: 154.73333333333335
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        code: "import json\nimport re\n\ndef main(memory_text: str) -> dict:\n   \
-          \ if not memory_text:\n        return {\n            \"should_save\": False,\n\
-          \            \"memory\": \"\"\n        }\n\n    text = memory_text.strip()\n\
-          \    text = re.sub(r\"^```json\\s*\", \"\", text)\n    text = re.sub(r\"\
-          ^```\\s*\", \"\", text)\n    text = re.sub(r\"\\s*```$\", \"\", text)\n\n\
-          \    match = re.search(r\"\\{.*\\}\", text, re.S)\n    if match:\n     \
-          \   text = match.group(0)\n\n    try:\n        data = json.loads(text)\n\
-          \    except Exception:\n        return {\n            \"should_save\": False,\n\
-          \            \"memory\": \"\"\n        }\n\n    memory = str(data.get(\"\
-          memory\", \"\")).strip()\n    should_save = bool(data.get(\"should_save\"\
-          , False)) and bool(memory)\n\n    return {\n        \"should_save\": should_save,\n\
-          \        \"memory\": memory[:300]\n    }"
-        code_language: python3
-        outputs:
-          memory:
-            children: null
-            type: string
-          should_save:
-            children: null
-            type: boolean
-        selected: false
-        title: Memory Parse
-        type: code
-        variables:
-        - value_selector:
-          - '1779205673504'
-          - text
-          value_type: string
-          variable: memory_text
-      height: 53
-      id: '1779940110651'
-      position:
-        x: 4176
-        y: 841.447619047619
-      positionAbsolute:
-        x: 4176
-        y: 841.447619047619
+        y: 51.83333333333337
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2496,11 +2615,11 @@ workflow:
       height: 89
       id: '1779963775579'
       position:
-        x: 4862
-        y: 596.3309523809525
+        x: 4176
+        y: 727.0119047619048
       positionAbsolute:
-        x: 4862
-        y: 596.3309523809525
+        x: 4176
+        y: 727.0119047619048
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2538,158 +2657,11 @@ workflow:
       height: 155
       id: '1779963867804'
       position:
-        x: 5205
-        y: 578.1642857142857
+        x: 4519
+        y: 708.8452380952381
       positionAbsolute:
-        x: 5205
-        y: 578.1642857142857
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        context:
-          enabled: false
-          variable_selector: []
-        model:
-          completion_params:
-            temperature: 0.7
-          mode: chat
-          name: deepseek-chat
-          provider: langgenius/deepseek/deepseek
-        prompt_template:
-        - id: f0dc4f2d-ac92-4a99-a2d5-7d2a9d53032d
-          role: system
-          text: "你是一个对话流程判断模块。\n\n你的任务是判断用户当前这句话是否表达了“想结束本次咨询 / 今天先聊到这里 / 不想继续展开”的意图。\n\
-            \n你只做流程判断，不做心理分析，不输出解释。\n\n请严格输出 JSON，不要 Markdown，不要代码块：\n\n{\n  \"user_wants_end\"\
-            : true,\n  \"confidence\": 0.0,\n  \"reason\": \"简短原因\"\n}\n\n# 判断为 user_wants_end\
-            \ = true 的情况\n\n- 用户明确说今天先到这里。\n- 用户说差不多了、先这样、下次再聊。\n- 用户表示现在不想继续说。\n\
-            - 用户表示想暂停本次对话。\n- 用户表达“我先走了”“我要去忙了”“我要睡了”。\n- 用户虽然没有说“结束”，但语义上是在收束本次咨询。\n\
-            \n# 判断为 false 的情况\n\n- 用户只是问“什么时候结束”。\n- 用户质疑为什么要结束。\n- 用户说“然后呢”“接下来怎么办”“什么时候能改”。\n\
-            - 用户还在提出新问题、要求计划、要求建议。\n- 用户只是说“不知道怎么说”，但没有表达结束。\n- 用户只是情绪低落或沉默倾向，不等于结束。\n\
-            - 用户只是说“困了”“好困”“有点累”“状态不好”，不等于结束。\n- 用户只是烦躁、质疑 Agent、说不想被这样问，不等于结束，除非明确说今天不聊了。\n\
-            - 如果用户只是表达困倦或疲惫，应判断为 false，除非明确说“今天先到这里 / 我要去睡了 / 先不聊了”。\n\n用户当前输入：\n\
-            {{#sys.query#}}\n\n当前对话记录：\n{{#1780825876878.transcript_text#}}"
-        selected: false
-        title: USER END INTENT DETECTION
-        type: llm
-        vision:
-          enabled: false
-      height: 89
-      id: '1779968567689'
-      position:
-        x: 2421
-        y: 405.06666666666666
-      positionAbsolute:
-        x: 2421
-        y: 405.06666666666666
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 243
-    - data:
-        code: "import json\nimport re\n\ndef main(intent_text: str, current_query:\
-          \ str, can_continue: bool, session_stage: str, remaining_minutes: float)\
-          \ -> dict:\n    user_wants_end = False\n    confidence = 0.0\n    reason\
-          \ = \"\"\n\n    if intent_text:\n        text = intent_text.strip()\n  \
-          \      text = re.sub(r\"^```json\\s*\", \"\", text)\n        text = re.sub(r\"\
-          ^```\\s*\", \"\", text)\n        text = re.sub(r\"\\s*```$\", \"\", text)\n\
-          \n        match = re.search(r\"\\{.*\\}\", text, re.S)\n        if match:\n\
-          \            text = match.group(0)\n\n        try:\n            data = json.loads(text)\n\
-          \            user_wants_end = bool(data.get(\"user_wants_end\", False))\n\
-          \            confidence = float(data.get(\"confidence\", 0.0))\n       \
-          \     reason = str(data.get(\"reason\", \"\")).strip()\n        except Exception:\n\
-          \            reason = \"parse_failed\"\n\n    try:\n        remaining =\
-          \ float(remaining_minutes or 0)\n    except Exception:\n        remaining\
-          \ = 0\n\n    current_query = (current_query or \"\").strip()\n    fatigue_markers\
-          \ = [\"困\", \"累\", \"疲惫\", \"没精神\", \"状态不好\"]\n    explicit_end_markers\
-          \ = [\"今天先到这里\", \"先到这里\", \"下次再聊\", \"先不聊\", \"不聊了\", \"我要睡了\", \"去睡了\"\
-          , \"睡觉了\", \"我要走了\", \"先走了\"]\n    fatigue_only = any(marker in current_query\
-          \ for marker in fatigue_markers) and not any(marker in current_query for\
-          \ marker in explicit_end_markers)\n    if fatigue_only:\n        user_wants_end\
-          \ = False\n        reason = \"fatigue_without_explicit_end\"\n\n    time_should_close\
-          \ = (can_continue is False) or session_stage in [\"ending\", \"ended\"]\
-          \ or remaining <= 2\n    should_close = time_should_close or (user_wants_end\
-          \ and confidence >= 0.65)\n\n    return {\n        \"user_wants_end\": user_wants_end,\n\
-          \        \"should_close\": should_close,\n        \"time_should_close\"\
-          : time_should_close,\n        \"confidence\": confidence,\n        \"reason\"\
-          : reason,\n        \"remaining_minutes_text\": str(round(remaining, 1)),\n\
-          \        \"user_wants_end_text\": \"true\" if user_wants_end else \"false\"\
-          ,\n        \"should_close_text\": \"true\" if should_close else \"false\"\
-          ,\n        \"time_should_close_text\": \"true\" if time_should_close else\
-          \ \"false\",\n        \"confidence_text\": str(round(confidence, 2))\n \
-          \   }"
-        code_language: python3
-        outputs:
-          confidence:
-            children: null
-            type: number
-          confidence_text:
-            children: null
-            type: string
-          reason:
-            children: null
-            type: string
-          remaining_minutes_text:
-            children: null
-            type: string
-          should_close:
-            children: null
-            type: boolean
-          should_close_text:
-            children: null
-            type: string
-          time_should_close:
-            children: null
-            type: boolean
-          time_should_close_text:
-            children: null
-            type: string
-          user_wants_end:
-            children: null
-            type: boolean
-          user_wants_end_text:
-            children: null
-            type: string
-        selected: false
-        title: USER END INTENT DETECTION parse
-        type: code
-        variables:
-        - value_selector:
-          - '1779968567689'
-          - text
-          value_type: string
-          variable: intent_text
-        - value_selector:
-          - sys
-          - query
-          value_type: string
-          variable: current_query
-        - value_selector:
-          - '1780825876878'
-          - can_continue
-          value_type: boolean
-          variable: can_continue
-        - value_selector:
-          - '1780825876878'
-          - session_stage
-          value_type: string
-          variable: session_stage
-        - value_selector:
-          - '1780825876878'
-          - remaining_minutes
-          value_type: number
-          variable: remaining_minutes
-      height: 53
-      id: '1779968610422'
-      position:
-        x: 2764
-        y: 437.9
-      positionAbsolute:
-        x: 2764
-        y: 437.9
+        x: 4519
+        y: 708.8452380952381
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2751,11 +2723,11 @@ workflow:
       height: 53
       id: '1780038042537'
       position:
-        x: 5548
-        y: 441.9976190476191
+        x: 4862
+        y: 572.6785714285714
       positionAbsolute:
-        x: 5548
-        y: 441.9976190476191
+        x: 4862
+        y: 572.6785714285714
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2793,11 +2765,11 @@ workflow:
       height: 89
       id: '1780040399983'
       position:
-        x: 5205
-        y: 409.1642857142857
+        x: 4519
+        y: 539.8452380952381
       positionAbsolute:
-        x: 5205
-        y: 409.1642857142857
+        x: 4519
+        y: 539.8452380952381
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2829,11 +2801,11 @@ workflow:
       height: 191
       id: '1780041151933'
       position:
-        x: 5891
-        y: 381.83095238095245
+        x: 5205
+        y: 512.5119047619048
       positionAbsolute:
-        x: 5891
-        y: 381.83095238095245
+        x: 5205
+        y: 512.5119047619048
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2871,11 +2843,11 @@ workflow:
       height: 155
       id: '1780051156476'
       position:
-        x: 5548
-        y: 603.9976190476191
+        x: 4862
+        y: 734.6785714285714
       positionAbsolute:
-        x: 5548
-        y: 603.9976190476191
+        x: 4862
+        y: 734.6785714285714
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -2993,11 +2965,11 @@ workflow:
       height: 89
       id: '1780061016312'
       position:
-        x: 3470
-        y: 189.6880952380953
+        x: 2784
+        y: 253
       positionAbsolute:
-        x: 3470
-        y: 189.6880952380953
+        x: 2784
+        y: 253
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3039,11 +3011,11 @@ workflow:
       height: 155
       id: '17800612389130'
       position:
-        x: 3813
-        y: 171.5214285714286
+        x: 3127
+        y: 234.83333333333337
       positionAbsolute:
-        x: 3813
-        y: 171.5214285714286
+        x: 3127
+        y: 234.83333333333337
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3061,11 +3033,11 @@ workflow:
       height: 103
       id: '17800612687800'
       position:
-        x: 4156
-        y: 223.35476190476197
+        x: 3470
+        y: 286.6666666666667
       positionAbsolute:
-        x: 4156
-        y: 223.35476190476197
+        x: 3470
+        y: 286.6666666666667
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3104,11 +3076,11 @@ workflow:
       id: '1780825750403'
       position:
         x: 343
-        y: -1.4285714285714306
+        y: 53.59285714285721
       positionAbsolute:
         x: 343
-        y: -1.4285714285714306
-      selected: true
+        y: 53.59285714285721
+      selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -3336,17 +3308,17 @@ workflow:
       id: '1780825876878'
       position:
         x: 686
-        y: 76.83333333333337
+        y: 130.42619047619053
       positionAbsolute:
         x: 686
-        y: 76.83333333333337
+        y: 130.42619047619053
       selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
       width: 243
     viewport:
-      x: -3389.5499999999997
-      y: 443.8516666666667
+      x: -856.303961620169
+      y: 589.9270565773029
       zoom: 0.7
   rag_pipeline_variables: []

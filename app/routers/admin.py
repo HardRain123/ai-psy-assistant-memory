@@ -16,6 +16,7 @@ from app.services.admin import (
     record_admin_audit,
 )
 from app.services.auth import AuthError, require_admin_session
+from app.services.sessions import reset_latest_session_to_yesterday
 
 
 router = APIRouter(
@@ -76,6 +77,23 @@ def get_users(
     except Exception:
         logger.exception("admin_user_list_failed")
         return json_error(500, "admin_user_list_failed")
+
+
+@router.post("/self/session/reset-to-yesterday")
+def reset_self_session_to_yesterday(x_auth_session: str | None = Header(default=None)):
+    try:
+        with transaction() as cur:
+            session = require_admin_session(cur, x_auth_session)
+            user_id = session["user"]["user_id"]
+            payload = reset_latest_session_to_yesterday(cur, user_id)
+            if not payload:
+                return json_error(404, "session_not_found", "session not found")
+        return payload
+    except AuthError as exc:
+        return auth_error_response(exc.status_code, exc.message)
+    except Exception:
+        logger.exception("admin_self_session_reset_failed")
+        return json_error(500, "admin_self_session_reset_failed")
 
 
 @router.get("/users/{user_id}/export")

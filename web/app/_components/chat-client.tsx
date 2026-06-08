@@ -13,15 +13,38 @@ type SessionStatus = {
   elapsed_minutes?: number
   can_continue?: boolean
   message?: string
+  timer_started?: boolean
+  session_stage?: string
+}
+
+type SessionHistoryItem = {
+  session_id: string
+  status?: string
+  stage?: string
+  started_at?: string
+  ended_at?: string
+  message_count?: number
+}
+
+const SESSION_SECONDS = 50 * 60
+
+function sessionTimerStarted(status?: SessionStatus | null) {
+  return (
+    status?.timer_started !== false &&
+    status?.status !== 'pending' &&
+    status?.session_stage !== 'not_started'
+  )
 }
 
 function remainingSecondsFromStatus(status?: SessionStatus | null) {
+  if (!sessionTimerStarted(status)) return null
   const minutes = Number(status?.remaining_minutes)
   if (!Number.isFinite(minutes)) return null
   return Math.max(0, Math.round(minutes * 60))
 }
 
-function formatRemaining(seconds: number | null) {
+function formatRemaining(seconds: number | null, timerStarted = true) {
+  if (!timerStarted) return '发送第一条消息后开始计时'
   if (seconds === null) return '剩余时间获取中'
   const safeSeconds = Math.max(0, seconds)
   const minutes = Math.floor(safeSeconds / 60)
@@ -29,35 +52,64 @@ function formatRemaining(seconds: number | null) {
   return `${minutes}:${String(restSeconds).padStart(2, '0')}`
 }
 
-function timerTone(seconds: number | null) {
+function timerTone(seconds: number | null, timerStarted = true) {
+  if (!timerStarted) return 'border-zinc-200 bg-zinc-100 text-zinc-600'
   if (seconds === null) return 'border-zinc-200 bg-zinc-100 text-zinc-600'
   if (seconds <= 5 * 60) return 'border-red-200 bg-red-50 text-red-700'
   if (seconds <= 10 * 60) return 'border-amber-200 bg-amber-50 text-amber-800'
   return 'border-emerald-200 bg-emerald-50 text-emerald-700'
 }
 
+function formatSessionTime(value?: string) {
+  if (!value) return '未开始'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function ChatClient({
   user,
   initialSessionStatus = null,
+  initialMessages = [],
+  initialMessagesSessionId = '',
+  sessionHistory = [],
 }: {
   user: User
   initialSessionStatus?: SessionStatus | null
+  initialMessages?: Message[]
+  initialMessagesSessionId?: string
+  sessionHistory?: SessionHistoryItem[]
 }) {
   const router = useRouter()
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
   const [conversationId, setConversationId] = useState('')
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(
     remainingSecondsFromStatus(initialSessionStatus)
   )
+  const [timerStarted, setTimerStarted] = useState(sessionTimerStarted(initialSessionStatus))
   const [sessionCanContinue, setSessionCanContinue] = useState(initialSessionStatus?.can_continue !== false)
   const [sending, setSending] = useState(false)
+  const [resettingSession, setResettingSession] = useState(false)
   const [error, setError] = useState('')
   const [authActionRequired, setAuthActionRequired] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
-  const timeLabel = useMemo(() => formatRemaining(remainingSeconds), [remainingSeconds])
+  const timeLabel = useMemo(() => formatRemaining(remainingSeconds, timerStarted), [remainingSeconds, timerStarted])
+  const sessionId = initialSessionStatus?.session_id || ''
+  const [showingHistoricalMessages, setShowingHistoricalMessages] = useState(
+    Boolean(initialMessagesSessionId && sessionId && initialMessagesSessionId !== sessionId)
+  )
+  const conversationStorageKey = sessionId
+    ? `psy-chat-conversation:${user.user_id}:${sessionId}`
+    : `psy-chat-conversation:${user.user_id}`
 
   useEffect(() => {
+    if (!timerStarted) return
     if (remainingSeconds === null) return
     const timer = window.setInterval(() => {
       setRemainingSeconds((prev) => {
@@ -70,12 +122,84 @@ export function ChatClient({
       })
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [remainingSeconds])
+  }, [remainingSeconds, timerStarted])
+
+  useEffect(() => {
+    const storedConversationId = window.localStorage.getItem(conversationStorageKey)
+    if (storedConversationId) {
+      setConversationId(storedConversationId)
+    }
+  }, [conversationStorageKey])
+
+  useEffect(() => {
+    if (!conversationId) return
+    window.localStorage.setItem(conversationStorageKey, conversationId)
+  }, [conversationId, conversationStorageKey])
+
+  useEffect(() => {
+    if (initialMessages.length === 0) return
+    scrollToBottomSoon()
+  }, [initialMessages.length])
 
   function scrollToBottomSoon() {
     window.setTimeout(() => {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, 0)
+  }
+
+  function startTimerIfNeeded() {
+    if (timerStarted) return
+
+    const minutes = Number(initialSessionStatus?.remaining_minutes)
+    const initialSeconds = Number.isFinite(minutes) ? Math.max(0, Math.round(minutes * 60)) : SESSION_SECONDS
+    setTimerStarted(true)
+    setRemainingSeconds((prev) => prev ?? initialSeconds)
+  }
+
+  async function resetSessionToYesterday() {
+    if (resettingSession) return
+    if (!window.confirm('仅用于管理员测试，会把当前会话改为昨天并刷新为新会话，继续吗？')) {
+      return
+    }
+
+    setError('')
+    setAuthActionRequired(false)
+    setResettingSession(true)
+
+    try {
+      const res = await fetch('/api/chat/admin-reset-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (res.status === 401) {
+        setError(typeof data.error === 'string' ? data.error : '请先登录。')
+        setAuthActionRequired(true)
+        setConversationId('')
+        window.localStorage.removeItem(conversationStorageKey)
+        return
+      }
+
+      if (!res.ok) {
+        throw new Error(typeof data.error === 'string' ? data.error : 'admin_reset_session_failed')
+      }
+
+      const shiftedSessionId =
+        data && typeof data.shifted_session_id === 'string' ? data.shifted_session_id : ''
+      window.localStorage.removeItem(conversationStorageKey)
+      setConversationId('')
+      if (shiftedSessionId) {
+        router.replace(`/chat?showSession=${encodeURIComponent(shiftedSessionId)}`)
+      } else {
+        router.refresh()
+      }
+    } catch {
+      setError('重置会话失败，请稍后再试。')
+    } finally {
+      setResettingSession(false)
+    }
   }
 
   function updateLastAssistantMessage(content: string) {
@@ -100,8 +224,9 @@ export function ChatClient({
     setAuthActionRequired(false)
     setInput('')
     setSending(true)
+    setShowingHistoricalMessages(false)
     setMessages((prev) => [
-      ...prev,
+      ...(showingHistoricalMessages ? [] : prev),
       { role: 'user', content: text },
       { role: 'assistant', content: '正在连接咨询引擎...' },
     ])
@@ -131,6 +256,8 @@ export function ChatClient({
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'chat_failed')
       }
+
+      startTimerIfNeeded()
 
       const contentType = res.headers.get('Content-Type') || ''
       if (!contentType.includes('text/event-stream') || !res.body) {
@@ -221,8 +348,20 @@ export function ChatClient({
                 {user.username}，可以从现在最想整理的一件事开始。
               </p>
             </div>
-            <div className={`w-fit rounded-lg border px-3 py-2 text-sm font-medium ${timerTone(remainingSeconds)}`}>
-              本次会话还剩 {timeLabel}
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              {user.is_admin && (
+                <button
+                  type="button"
+                  onClick={resetSessionToYesterday}
+                  disabled={resettingSession}
+                  className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {resettingSession ? '重置中...' : '重置到昨天'}
+                </button>
+              )}
+              <div className={`w-fit rounded-lg border px-3 py-2 text-sm font-medium ${timerTone(remainingSeconds, timerStarted)}`}>
+                {timerStarted ? <>本次会话还剩 {timeLabel}</> : timeLabel}
+              </div>
             </div>
           </div>
         </div>
@@ -302,6 +441,33 @@ export function ChatClient({
       </section>
 
       <aside className="space-y-4">
+        {sessionHistory.length > 0 && (
+          <div className="rounded-lg border border-zinc-200 bg-white p-4">
+            <h2 className="text-sm font-semibold text-zinc-900">历史会话</h2>
+            <div className="mt-3 space-y-2">
+              {sessionHistory.map((item) => {
+                const selected = item.session_id === initialMessagesSessionId
+                return (
+                  <button
+                    key={item.session_id}
+                    type="button"
+                    onClick={() => router.replace(`/chat?showSession=${encodeURIComponent(item.session_id)}`)}
+                    className={
+                      selected
+                        ? 'w-full rounded-lg border border-zinc-900 bg-zinc-900 px-3 py-2 text-left text-sm text-white'
+                        : 'w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50'
+                    }
+                  >
+                    <span className="block font-medium">{formatSessionTime(item.started_at)}</span>
+                    <span className={selected ? 'mt-1 block text-xs text-zinc-200' : 'mt-1 block text-xs text-zinc-500'}>
+                      {item.message_count || 0} 条消息
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         <CrisisNotice />
         <PrivacyNotice />
         <div className="rounded-lg border border-zinc-200 bg-white p-4">

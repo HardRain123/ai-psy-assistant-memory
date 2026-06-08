@@ -1,8 +1,10 @@
 import json
 import os
+import sys
 import tempfile
 import unittest
 import uuid
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
@@ -17,12 +19,17 @@ os.environ.setdefault("BACKEND_SHARED_TOKEN", "test-backend-token")
 os.environ.setdefault("ADMIN_USERNAME", "admin")
 os.environ.setdefault("ADMIN_PASSWORD", "admin-password")
 
+if "app.main" not in sys.modules:
+    for path in [TEST_DB, TEST_DB.with_name(f"{TEST_DB.name}-wal"), TEST_DB.with_name(f"{TEST_DB.name}-shm")]:
+        if path.exists():
+            path.unlink()
+
 from fastapi.testclient import TestClient
 
 from app import db as db_module
 from app.db import transaction
 from app.main import app
-from app.services.auth import hash_password
+from app.services.auth import create_auth_session, hash_password
 
 
 client = TestClient(app)
@@ -77,6 +84,26 @@ def create_regular_user(admin_token: str, note: str = "user"):
         "password": password,
         "user_id": registered.json()["user"]["user_id"],
         "session_token": logged_in.json()["session_token"],
+    }
+
+
+def create_extra_admin(note: str = "admin"):
+    user_id = f"admin-{uuid.uuid4().hex}"
+    username = unique_name(note)
+    now = datetime.now().isoformat()
+    with transaction() as cur:
+        cur.execute(
+            """
+            INSERT INTO users (user_id, username, password_hash, is_admin, created_at, updated_at)
+            VALUES (?, ?, ?, 1, ?, ?)
+            """,
+            (user_id, username, hash_password("admin-password-123"), now, now),
+        )
+        session = create_auth_session(cur, user_id)
+    return {
+        "user_id": user_id,
+        "username": username,
+        "session_token": session["session_token"],
     }
 
 
@@ -822,6 +849,86 @@ class AuthApiTests(unittest.TestCase):
         )
         self.assertEqual(disable_response.status_code, 403)
         self.assertEqual(disable_response.json()["error"], "admin_required")
+
+    def test_admin_can_reset_only_own_latest_session_to_yesterday(self):
+        admin_token = login_admin()
+        admin_user_id = client.get(
+            "/internal/auth/me",
+            headers={"X-Auth-Session": admin_token},
+        ).json()["user"]["user_id"]
+        admin_session = client.get(f"/session/status/{admin_user_id}").json()
+        regular = create_regular_user(admin_token, note="reset-other")
+        regular_session = client.get(f"/session/status/{regular['user_id']}").json()
+
+        response = client.post(
+            "/internal/admin/self/session/reset-to-yesterday",
+            headers={"X-Auth-Session": admin_token},
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["shifted_session_id"], admin_session["session_id"])
+        self.assertEqual(data["new_session"]["status"], "pending")
+        self.assertFalse(data["new_session"]["timer_started"])
+        self.assertNotEqual(data["new_session"]["session_id"], admin_session["session_id"])
+        self.assertIsNone(data["new_session"]["started_at"])
+        self.assertEqual(datetime.fromisoformat(data["new_session"]["created_at"]).date(), datetime.now().date())
+
+        yesterday = datetime.now().date() - timedelta(days=1)
+        with transaction() as cur:
+            cur.execute(
+                """
+                SELECT user_id, started_at, auto_close_at, ended_at, final_saved_at,
+                       status, stage, close_reason
+                FROM sessions
+                WHERE session_id = ?
+                """,
+                (admin_session["session_id"],),
+            )
+            shifted = cur.fetchone()
+            cur.execute(
+                """
+                SELECT status, stage, close_reason
+                FROM sessions
+                WHERE session_id = ?
+                """,
+                (regular_session["session_id"],),
+            )
+            untouched_regular = cur.fetchone()
+
+        self.assertEqual(shifted[0], admin_user_id)
+        for value in shifted[1:5]:
+            self.assertEqual(datetime.fromisoformat(value).date(), yesterday)
+        self.assertEqual(shifted[3], shifted[2])
+        self.assertEqual(shifted[4], shifted[3])
+        self.assertEqual(shifted[5], "ended")
+        self.assertEqual(shifted[6], "ended")
+        self.assertEqual(shifted[7], "admin_self_session_reset")
+        self.assertEqual(untouched_regular[0], "pending")
+        self.assertEqual(untouched_regular[1], "not_started")
+        self.assertIsNone(untouched_regular[2])
+
+    def test_admin_session_reset_requires_admin_login_and_existing_session(self):
+        admin_token = login_admin()
+        regular = create_regular_user(admin_token, note="reset-forbidden")
+        empty_admin = create_extra_admin(note="reset-empty-admin")
+
+        missing_session = client.post("/internal/admin/self/session/reset-to-yesterday")
+        self.assertEqual(missing_session.status_code, 401)
+
+        forbidden = client.post(
+            "/internal/admin/self/session/reset-to-yesterday",
+            headers={"X-Auth-Session": regular["session_token"]},
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
+        not_found = client.post(
+            "/internal/admin/self/session/reset-to-yesterday",
+            headers={"X-Auth-Session": empty_admin["session_token"]},
+        )
+        self.assertEqual(not_found.status_code, 404)
+        self.assertEqual(not_found.json()["error"], "session_not_found")
 
     def test_admin_user_export_is_redacted_and_disable_revokes_sessions(self):
         admin_token = login_admin()
