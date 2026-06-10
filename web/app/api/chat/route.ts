@@ -1,5 +1,7 @@
 import { backendRequest, clearSessionCookie, getCurrentUser } from '../_lib/auth'
 
+type MessageSyncStatus = 'streaming' | 'complete' | 'error'
+
 async function getCurrentSessionId(userId: string, sessionToken: string) {
   const result = await backendRequest(`/session/status/${encodeURIComponent(userId)}`, {
     method: 'GET',
@@ -14,16 +16,24 @@ async function saveSessionMessage({
   role,
   content,
   sessionToken,
+  turnId,
+  externalMessageId,
+  syncStatus = 'complete',
+  difyConversationId,
 }: {
   userId: string
   sessionId: string
   role: 'user' | 'assistant'
   content: string
   sessionToken: string
+  turnId?: string
+  externalMessageId?: string
+  syncStatus?: MessageSyncStatus
+  difyConversationId?: string
 }) {
-  if (!sessionId || !content.trim()) return
+  if (!sessionId || (!content.trim() && !difyConversationId)) return
 
-  await backendRequest('/session-message', {
+  return backendRequest('/session-message', {
     method: 'POST',
     sessionToken,
     body: JSON.stringify({
@@ -31,8 +41,19 @@ async function saveSessionMessage({
       session_id: sessionId,
       role,
       content,
+      turn_id: turnId || undefined,
+      external_message_id: externalMessageId || undefined,
+      sync_status: syncStatus,
+      dify_conversation_id: difyConversationId || undefined,
     }),
   })
+}
+
+function createTurnId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 export async function POST(req: Request) {
@@ -67,13 +88,18 @@ export async function POST(req: Request) {
 
     const userId = current.user.user_id
     const sessionId = await getCurrentSessionId(userId, current.sessionToken)
-    await saveSessionMessage({
+    const turnId = createTurnId()
+    const userMessageSave = await saveSessionMessage({
       userId,
       sessionId,
       role: 'user',
       content: message.trim(),
       sessionToken: current.sessionToken,
+      turnId,
+      syncStatus: 'complete',
+      difyConversationId: typeof conversationId === 'string' ? conversationId : undefined,
     })
+    const metadataSupported = Boolean(userMessageSave?.ok && userMessageSave.data?.turn_id === turnId)
 
     const contextResult = await backendRequest(`/context/${encodeURIComponent(userId)}`, {
       method: 'GET',
@@ -132,13 +158,66 @@ export async function POST(req: Request) {
         const reader = res.body!.getReader()
         let buffer = ''
         let latestConversationId = typeof conversationId === 'string' ? conversationId : ''
+        let latestDifyMessageId = ''
         let assistantAnswer = ''
+        let lastPersistedLength = 0
+        let lastPersistedAt = 0
+        let lastPersistedStatus = ''
+        let persistedConversationId = ''
+        let streamCompleted = false
+        let responseClosed = false
 
         function emit(payload: Record<string, unknown>) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
+          if (responseClosed) return
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
+          } catch {
+            responseClosed = true
+          }
         }
 
-        function handleEvent(raw: string) {
+        async function persistAssistantSnapshot(syncStatus: MessageSyncStatus) {
+          if (!assistantAnswer.trim()) return
+          if (!metadataSupported && syncStatus !== 'complete') return
+          if (syncStatus === 'complete' && lastPersistedStatus === 'complete') return
+          const now = Date.now()
+          const shouldPersist =
+            syncStatus === 'complete' ||
+            syncStatus === 'error' ||
+            assistantAnswer.length - lastPersistedLength >= 240 ||
+            now - lastPersistedAt >= 1500
+          if (!shouldPersist) return
+
+          await saveSessionMessage({
+            userId,
+            sessionId,
+            role: 'assistant',
+            content: assistantAnswer,
+            sessionToken: current.sessionToken,
+            turnId,
+            externalMessageId: latestDifyMessageId,
+            syncStatus,
+            difyConversationId: latestConversationId,
+          })
+          lastPersistedLength = assistantAnswer.length
+          lastPersistedAt = now
+          lastPersistedStatus = syncStatus
+        }
+
+        async function persistConversationId() {
+          if (!latestConversationId || latestConversationId === persistedConversationId) return
+          await saveSessionMessage({
+            userId,
+            sessionId,
+            role: 'assistant',
+            content: '',
+            sessionToken: current.sessionToken,
+            difyConversationId: latestConversationId,
+          })
+          persistedConversationId = latestConversationId
+        }
+
+        async function handleEvent(raw: string) {
           if (!raw || raw === '[DONE]') return
 
           let event: Record<string, unknown>
@@ -150,11 +229,22 @@ export async function POST(req: Request) {
 
           if (typeof event.conversation_id === 'string' && event.conversation_id) {
             latestConversationId = event.conversation_id
+            await persistConversationId()
             emit({ type: 'conversation', conversationId: latestConversationId })
+          }
+          const rawMessageId =
+            typeof event.message_id === 'string'
+              ? event.message_id
+              : typeof event.id === 'string'
+                ? event.id
+                : ''
+          if (rawMessageId) {
+            latestDifyMessageId = rawMessageId
           }
 
           const eventName = typeof event.event === 'string' ? event.event : ''
           if (eventName === 'error') {
+            await persistAssistantSnapshot('error')
             emit({ type: 'error', error: '聊天服务暂时不可用，请稍后再试。' })
             return
           }
@@ -162,9 +252,12 @@ export async function POST(req: Request) {
           if (typeof event.answer === 'string' && event.answer) {
             assistantAnswer += event.answer
             emit({ type: 'chunk', answer: event.answer })
+            await persistAssistantSnapshot('streaming')
           }
 
           if (eventName === 'message_end' || eventName === 'workflow_finished') {
+            streamCompleted = true
+            await persistAssistantSnapshot('complete')
             emit({ type: 'done', conversationId: latestConversationId })
           }
         }
@@ -181,26 +274,31 @@ export async function POST(req: Request) {
             for (const line of lines) {
               const trimmed = line.trim()
               if (!trimmed.startsWith('data:')) continue
-              handleEvent(trimmed.slice(5).trim())
+              await handleEvent(trimmed.slice(5).trim())
             }
           }
 
           if (buffer.trim().startsWith('data:')) {
-            handleEvent(buffer.trim().slice(5).trim())
+            await handleEvent(buffer.trim().slice(5).trim())
           }
 
+          streamCompleted = true
+          await persistAssistantSnapshot('complete')
           emit({ type: 'done', conversationId: latestConversationId })
         } catch {
+          await persistAssistantSnapshot('error')
           emit({ type: 'error', error: '聊天服务暂时不可用，请稍后再试。' })
         } finally {
-          await saveSessionMessage({
-            userId,
-            sessionId,
-            role: 'assistant',
-            content: assistantAnswer,
-            sessionToken: current.sessionToken,
-          })
-          controller.close()
+          if (assistantAnswer.trim() && lastPersistedStatus !== 'complete' && lastPersistedStatus !== 'error') {
+            await persistAssistantSnapshot(streamCompleted ? 'complete' : 'streaming')
+          }
+          if (!responseClosed) {
+            try {
+              controller.close()
+            } catch {
+              responseClosed = true
+            }
+          }
         }
       },
     })

@@ -1,5 +1,6 @@
 import httpx
 
+from app.services.dify_auto_finalize import AUTO_FINALIZE_MARKER, request_dify_auto_finalize
 from tests.dify_client import DEFAULT_DIFY_API_BASE, DifyClient
 
 
@@ -63,6 +64,71 @@ def test_dify_client_uses_official_chatflow_request_shape(monkeypatch):
     assert response.answer
     assert response.conversation_id == "conv-123"
     assert response.message_identifier == "msg-456"
+
+
+def test_dify_auto_finalize_uses_blocking_chatflow_request_shape(monkeypatch):
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+        text = ""
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "answer": "finalized",
+                "conversation_id": "conv-final",
+                "message_id": "msg-final",
+            }
+
+    class FakeHttpxClient:
+        def __init__(self, timeout, trust_env):
+            captured["timeout"] = timeout
+            captured["trust_env"] = trust_env
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def post(self, url, headers, json):
+            captured["url"] = url
+            captured["headers"] = headers
+            captured["json"] = json
+            return FakeResponse()
+
+    monkeypatch.setenv("DIFY_API_KEY", "auto-finalize-key")
+    monkeypatch.setenv("DIFY_API_URL", "https://dify.example/v1")
+    monkeypatch.setattr("app.services.dify_auto_finalize.httpx.Client", FakeHttpxClient)
+
+    result = request_dify_auto_finalize(
+        user_id="auto-user",
+        session_id="session-123",
+        conversation_id="conv-previous",
+    )
+
+    assert result.attempted is True
+    assert result.success is True
+    assert captured["timeout"] == 60
+    assert captured["trust_env"] is False
+    assert captured["url"] == "https://dify.example/v1/chat-messages"
+    assert captured["headers"] == {
+        "Authorization": "Bearer auto-finalize-key",
+        "Content-Type": "application/json",
+    }
+    assert captured["json"]["conversation_id"] == "conv-previous"
+    assert captured["json"]["user"] == "auto-user"
+    assert captured["json"]["response_mode"] == "blocking"
+    assert captured["json"]["inputs"] == {
+        "user_id": "auto-user",
+        "auto_finalize_session": True,
+        "target_session_id": "session-123",
+    }
+    assert AUTO_FINALIZE_MARKER in captured["json"]["query"]
+    assert "target_session_id=session-123" in captured["json"]["query"]
 
 
 def test_dify_client_env_defaults(monkeypatch):

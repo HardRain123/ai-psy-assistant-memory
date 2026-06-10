@@ -6,7 +6,8 @@ from datetime import datetime
 
 from app.config import TASK_SCAN_INTERVAL_SECONDS
 from app.db import db_lock, get_conn
-from app.services.sessions import end_session_workflow, insert_session_task_history
+from app.services.session_autofinalize import auto_finalize_session_with_dify
+from app.services.sessions import insert_session_task_history
 from app.utils import now_iso
 
 
@@ -61,17 +62,20 @@ def scan_expired_sessions_and_create_tasks(limit: int = 20):
             cur = conn.cursor()
             now = now_iso()
 
+            today_start = datetime.combine(datetime.now().date(), datetime.min.time()).isoformat()
             cur.execute(
                 """
                 SELECT id, session_id, user_id
                 FROM sessions
                 WHERE status = 'open'
-                  AND auto_close_at IS NOT NULL
-                  AND auto_close_at <= ?
+                  AND (
+                    (auto_close_at IS NOT NULL AND auto_close_at <= ?)
+                    OR started_at < ?
+                  )
                 ORDER BY auto_close_at ASC
                 LIMIT ?
                 """,
-                (now, limit),
+                (now, today_start, limit),
             )
             rows = cur.fetchall()
 
@@ -184,25 +188,35 @@ def complete_task(cur, task: dict, result: str):
 
 
 def run_task(task: dict):
-    with db_lock:
-        conn = get_conn()
-        try:
-            cur = conn.cursor()
-            if task["task_type"] == "auto_end_session":
-                result = end_session_workflow(
-                    cur,
-                    task["session_id"],
-                    user_id=task["user_id"],
-                    reason="auto_timeout_task",
-                    task_id=task["task_id"],
-                )
+    if task["task_type"] == "auto_end_session":
+        result = auto_finalize_session_with_dify(
+            user_id=task["user_id"],
+            session_id=task["session_id"],
+            reason="auto_timeout_task",
+            task_id=task["task_id"],
+        )
+        with db_lock:
+            conn = get_conn()
+            try:
+                cur = conn.cursor()
                 complete_task(
                     cur,
                     task,
                     f"auto_end_session completed handoff={result.get('handoff_document_id')}",
                 )
-            else:
-                complete_task(cur, task, "task type reserved for future worker")
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
+        return
+
+    with db_lock:
+        conn = get_conn()
+        try:
+            cur = conn.cursor()
+            complete_task(cur, task, "task type reserved for future worker")
 
             conn.commit()
 

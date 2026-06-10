@@ -21,6 +21,9 @@ export type Account = {
 export type Message = {
   role: 'user' | 'assistant'
   content: string
+  turn_id?: string
+  external_message_id?: string
+  sync_status?: string
 }
 
 export type Invite = {

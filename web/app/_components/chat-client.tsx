@@ -8,6 +8,7 @@ import type { Message, User } from './types'
 
 type SessionStatus = {
   session_id?: string
+  dify_conversation_id?: string
   status?: string
   remaining_minutes?: number
   elapsed_minutes?: number
@@ -27,6 +28,9 @@ type SessionHistoryItem = {
 }
 
 const SESSION_SECONDS = 50 * 60
+const STREAM_FLUSH_INTERVAL_MS = 80
+const ASSISTANT_SYNC_ATTEMPTS = 30
+const ASSISTANT_SYNC_INTERVAL_MS = 2000
 
 function sessionTimerStarted(status?: SessionStatus | null) {
   return (
@@ -72,6 +76,13 @@ function formatSessionTime(value?: string) {
   })
 }
 
+function needsAssistantSync(messages: Message[]) {
+  const latest = messages[messages.length - 1]
+  if (!latest) return false
+  if (latest.role === 'user') return true
+  return Boolean(latest.sync_status && latest.sync_status !== 'complete')
+}
+
 export function ChatClient({
   user,
   initialSessionStatus = null,
@@ -98,7 +109,10 @@ export function ChatClient({
   const [resettingSession, setResettingSession] = useState(false)
   const [error, setError] = useState('')
   const [authActionRequired, setAuthActionRequired] = useState(false)
+  const messagesScrollRef = useRef<HTMLDivElement | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const conversationIdRef = useRef('')
+  const syncAttemptedRef = useRef(false)
   const timeLabel = useMemo(() => formatRemaining(remainingSeconds, timerStarted), [remainingSeconds, timerStarted])
   const sessionId = initialSessionStatus?.session_id || ''
   const [showingHistoricalMessages, setShowingHistoricalMessages] = useState(
@@ -126,24 +140,69 @@ export function ChatClient({
 
   useEffect(() => {
     const storedConversationId = window.localStorage.getItem(conversationStorageKey)
-    if (storedConversationId) {
-      setConversationId(storedConversationId)
-    }
-  }, [conversationStorageKey])
+    setConversationId(storedConversationId || initialSessionStatus?.dify_conversation_id || '')
+  }, [conversationStorageKey, initialSessionStatus?.dify_conversation_id])
 
   useEffect(() => {
+    conversationIdRef.current = conversationId
     if (!conversationId) return
     window.localStorage.setItem(conversationStorageKey, conversationId)
   }, [conversationId, conversationStorageKey])
+
+  useEffect(() => {
+    if (showingHistoricalMessages) return
+    if (syncAttemptedRef.current) return
+    if (!needsAssistantSync(initialMessages)) return
+    let cancelled = false
+    syncAttemptedRef.current = true
+
+    async function syncAssistantReply() {
+      for (let attempt = 0; attempt < ASSISTANT_SYNC_ATTEMPTS; attempt += 1) {
+        if (cancelled) return
+        try {
+          const syncConversationId = conversationIdRef.current || initialSessionStatus?.dify_conversation_id || ''
+          const res = await fetch('/api/chat/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: syncConversationId || undefined }),
+          })
+          const data = await res.json().catch(() => ({}))
+          if (!cancelled && res.ok && (data.synced === true || data.reason === 'already_complete')) {
+            router.refresh()
+            return
+          }
+        } catch {
+          // Best-effort recovery only; retry below while the page still shows an incomplete turn.
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, ASSISTANT_SYNC_INTERVAL_MS))
+      }
+    }
+
+    void syncAssistantReply()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    conversationId,
+    initialMessages,
+    initialSessionStatus?.dify_conversation_id,
+    router,
+    showingHistoricalMessages,
+  ])
 
   useEffect(() => {
     if (initialMessages.length === 0) return
     scrollToBottomSoon()
   }, [initialMessages.length])
 
-  function scrollToBottomSoon() {
+  function scrollToBottomSoon(behavior: ScrollBehavior = 'auto') {
     window.setTimeout(() => {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      const container = messagesScrollRef.current
+      if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior })
+        return
+      }
+      bottomRef.current?.scrollIntoView({ behavior })
     }, 0)
   }
 
@@ -202,7 +261,7 @@ export function ChatClient({
     }
   }
 
-  function updateLastAssistantMessage(content: string) {
+  function updateLastAssistantMessage(content: string, behavior: ScrollBehavior = 'auto') {
     setMessages((prev) => {
       const next = [...prev]
       for (let index = next.length - 1; index >= 0; index -= 1) {
@@ -213,7 +272,7 @@ export function ChatClient({
       }
       return [...next, { role: 'assistant', content }]
     })
-    scrollToBottomSoon()
+    scrollToBottomSoon(behavior)
   }
 
   async function sendMessage() {
@@ -231,6 +290,7 @@ export function ChatClient({
       { role: 'assistant', content: '正在连接咨询引擎...' },
     ])
     scrollToBottomSoon()
+    let streamFlushTimer: number | null = null
 
     try {
       const res = await fetch('/api/chat', {
@@ -273,7 +333,23 @@ export function ChatClient({
       const decoder = new TextDecoder()
       let buffer = ''
       let answer = ''
+      let displayedAnswer = ''
       let streamError = ''
+
+      function flushAnswer() {
+        if (streamFlushTimer !== null) {
+          window.clearTimeout(streamFlushTimer)
+          streamFlushTimer = null
+        }
+        if (!answer || answer === displayedAnswer) return
+        displayedAnswer = answer
+        updateLastAssistantMessage(answer)
+      }
+
+      function scheduleAnswerFlush() {
+        if (streamFlushTimer !== null) return
+        streamFlushTimer = window.setTimeout(flushAnswer, STREAM_FLUSH_INTERVAL_MS)
+      }
 
       function handleEvent(raw: string) {
         if (!raw) return
@@ -293,7 +369,7 @@ export function ChatClient({
         }
         if (event.type === 'chunk' && event.answer) {
           answer += event.answer
-          updateLastAssistantMessage(answer)
+          scheduleAnswerFlush()
         }
       }
 
@@ -319,6 +395,7 @@ export function ChatClient({
       if (buffer.trim().startsWith('data:')) {
         handleEvent(buffer.trim().slice(5).trim())
       }
+      flushAnswer()
 
       if (!answer) {
         updateLastAssistantMessage(streamError || '我刚才没有拿到有效回复，可以再说一次吗？')
@@ -326,6 +403,9 @@ export function ChatClient({
     } catch {
       updateLastAssistantMessage('刚才连接失败了，可能是服务暂时不可用。你可以稍后再试一次。')
     } finally {
+      if (streamFlushTimer !== null) {
+        window.clearTimeout(streamFlushTimer)
+      }
       setSending(false)
     }
   }
@@ -338,8 +418,8 @@ export function ChatClient({
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-4 px-4 py-5 lg:grid-cols-[1fr_320px]">
-      <section className="flex min-h-[calc(100vh-124px)] flex-col rounded-lg border border-zinc-200 bg-white">
+    <div className="mx-auto grid max-w-6xl gap-4 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="flex h-[calc(100vh-124px)] min-h-[520px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white">
         <div className="border-b border-zinc-200 px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -366,7 +446,10 @@ export function ChatClient({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div
+          ref={messagesScrollRef}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable]"
+        >
           {messages.length === 0 && (
             <EmptyState
               title="还没有开始对话"
@@ -382,8 +465,8 @@ export function ChatClient({
               <div
                 className={
                   message.role === 'user'
-                    ? 'max-w-[86%] rounded-lg bg-zinc-900 px-4 py-3 leading-7 text-white'
-                    : 'max-w-[86%] rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 leading-7 text-zinc-900'
+                    ? 'max-w-[86%] whitespace-pre-wrap break-words rounded-lg bg-zinc-900 px-4 py-3 leading-7 text-white'
+                    : 'max-w-[86%] whitespace-pre-wrap break-words rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 leading-7 text-zinc-900'
                 }
               >
                 {message.content}
@@ -444,7 +527,7 @@ export function ChatClient({
         {sessionHistory.length > 0 && (
           <div className="rounded-lg border border-zinc-200 bg-white p-4">
             <h2 className="text-sm font-semibold text-zinc-900">历史会话</h2>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 max-h-[min(420px,calc(100vh-220px))] space-y-2 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
               {sessionHistory.map((item) => {
                 const selected = item.session_id === initialMessagesSessionId
                 return (

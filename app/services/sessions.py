@@ -70,7 +70,8 @@ def get_latest_session(cur, user_id: str):
         """
         SELECT id, session_id, user_id, started_at, ended_at, status,
                final_saved_at, auto_close_at, stage, summary, risk_level,
-               is_low_content, summary_type, user_message_count, user_char_count
+               is_low_content, summary_type, user_message_count, user_char_count,
+               dify_conversation_id
         FROM sessions
         WHERE user_id = ?
         ORDER BY started_at DESC
@@ -206,6 +207,7 @@ def reset_latest_session_to_yesterday(cur, user_id: str) -> dict | None:
         _summary_type,
         _user_message_count,
         _user_char_count,
+        _dify_conversation_id,
     ) = row
     session_id = public_session_id or session_pk
 
@@ -726,6 +728,7 @@ def active_status_response(row) -> dict:
         summary_type,
         user_message_count,
         user_char_count,
+        dify_conversation_id,
     ) = row
     if status == PENDING_STATUS:
         return pending_status_response(row)
@@ -752,6 +755,7 @@ def active_status_response(row) -> dict:
         "summary_type": summary_type or "formal",
         "user_message_count": user_message_count or 0,
         "user_char_count": user_char_count or 0,
+        "dify_conversation_id": dify_conversation_id or "",
         "timer_started": True,
     }
 
@@ -773,6 +777,7 @@ def pending_status_response(row, is_new_session: bool = False) -> dict:
         summary_type,
         user_message_count,
         user_char_count,
+        dify_conversation_id,
     ) = row
     return {
         "session_id": public_session_id or session_pk,
@@ -796,6 +801,7 @@ def pending_status_response(row, is_new_session: bool = False) -> dict:
         "summary_type": summary_type or "formal",
         "user_message_count": user_message_count or 0,
         "user_char_count": user_char_count or 0,
+        "dify_conversation_id": dify_conversation_id or "",
         "timer_started": False,
     }
 

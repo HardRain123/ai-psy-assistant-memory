@@ -18,6 +18,10 @@ from app.services.sessions import (
     get_latest_session,
     has_session_today,
 )
+from app.services.session_autofinalize import (
+    auto_finalize_session_with_dify,
+    auto_finalize_stale_sessions_for_user,
+)
 from app.utils import bool_text, calc_stage, parse_dt
 
 
@@ -28,6 +32,8 @@ logger = logging.getLogger(__name__)
 @router.get("/session/status/{user_id}")
 def session_status(user_id: str):
     try:
+        auto_finalize_stale_sessions_for_user(user_id, reason="auto_previous_day_status_check")
+
         with read_transaction() as cur:
             row = get_latest_session(cur, user_id)
 
@@ -51,6 +57,7 @@ def session_status(user_id: str):
             summary_type,
             user_message_count,
             user_char_count,
+            _dify_conversation_id,
         ) = row
         session_id = public_session_id or session_pk
 
@@ -76,33 +83,30 @@ def session_status(user_id: str):
         auto_close_reached = bool(auto_close_at and parse_dt(auto_close_at) <= datetime.now())
 
         if started_at.date() < today:
+            auto_finalize_session_with_dify(
+                user_id=user_id,
+                session_id=session_id,
+                reason="auto_previous_day_status_check",
+            )
+            logger.info("previous_day_session_closed user_id=%s session_id=%s", user_id, session_id)
             with transaction() as cur:
-                end_session_workflow(
-                    cur,
-                    session_id,
-                    user_id=user_id,
-                    reason="auto_previous_day_status_check",
-                )
-                logger.info("previous_day_session_closed user_id=%s session_id=%s", user_id, session_id)
                 return create_pending_session(cur, user_id)
 
         if current_stage == "ended" or auto_close_reached:
-            with transaction() as cur:
-                result = end_session_workflow(
-                    cur,
-                    session_id,
-                    user_id=user_id,
-                    reason="auto_timeout_status_check",
-                )
-                return ended_status_response(
-                    session_id=session_id,
-                    started_at=started_at_str,
-                    ended_at=result["ended_at"],
-                    final_saved_at=result["final_saved_at"],
-                    risk_level=result.get("risk_level", risk_level),
-                    message="本次 50 分钟咨询已经结束，明天可以开始下一次咨询。",
-                    elapsed_minutes=elapsed,
-                )
+            result = auto_finalize_session_with_dify(
+                user_id=user_id,
+                session_id=session_id,
+                reason="auto_timeout_status_check",
+            )
+            return ended_status_response(
+                session_id=session_id,
+                started_at=started_at_str,
+                ended_at=result["ended_at"],
+                final_saved_at=result["final_saved_at"],
+                risk_level=result.get("risk_level", risk_level),
+                message="本次 50 分钟咨询已经结束，明天可以开始下一次咨询。",
+                elapsed_minutes=elapsed,
+            )
 
         return active_status_response(row)
 
@@ -114,6 +118,8 @@ def session_status(user_id: str):
 @router.post("/session/start/{user_id}")
 def start_session(user_id: str):
     try:
+        auto_finalize_stale_sessions_for_user(user_id, reason="auto_close_before_manual_start")
+
         with transaction() as cur:
             if has_session_today(cur, user_id):
                 return {

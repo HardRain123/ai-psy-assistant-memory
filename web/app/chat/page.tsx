@@ -39,7 +39,21 @@ function transcriptMessages(data: unknown): Message[] {
       return []
     }
 
-    return [{ role, content }]
+    return [
+      {
+        role,
+        content,
+        turn_id: typeof (item as { turn_id?: unknown }).turn_id === 'string' ? (item as { turn_id: string }).turn_id : '',
+        external_message_id:
+          typeof (item as { external_message_id?: unknown }).external_message_id === 'string'
+            ? (item as { external_message_id: string }).external_message_id
+            : '',
+        sync_status:
+          typeof (item as { sync_status?: unknown }).sync_status === 'string'
+            ? (item as { sync_status: string }).sync_status
+            : 'complete',
+      },
+    ]
   })
 }
 
@@ -90,6 +104,56 @@ function firstParam(value: string | string[] | undefined) {
   return value || ''
 }
 
+function normalizedContent(value: string) {
+  return value.trim().replace(/\s+/g, ' ')
+}
+
+function messagesOverlap(left: string, right: string) {
+  const a = normalizedContent(left)
+  const b = normalizedContent(right)
+  if (!a || !b) return false
+  return a === b || a.startsWith(b) || b.startsWith(a)
+}
+
+function mergeAssistantMessage(existing: Message, incoming: Message): Message {
+  const useIncoming = normalizedContent(incoming.content).length >= normalizedContent(existing.content).length
+  const primary = useIncoming ? incoming : existing
+  const secondary = useIncoming ? existing : incoming
+
+  return {
+    ...primary,
+    turn_id: primary.turn_id || secondary.turn_id || '',
+    external_message_id: primary.external_message_id || secondary.external_message_id || '',
+    sync_status:
+      existing.sync_status === 'complete' || incoming.sync_status === 'complete'
+        ? 'complete'
+        : primary.sync_status || secondary.sync_status || 'complete',
+  }
+}
+
+function coalesceAssistantMessages(messages: Message[]) {
+  const coalesced: Message[] = []
+
+  for (const message of messages) {
+    const previous = coalesced[coalesced.length - 1]
+    if (!previous || previous.role !== 'assistant' || message.role !== 'assistant') {
+      coalesced.push(message)
+      continue
+    }
+
+    const sameTurn = Boolean(previous.turn_id && previous.turn_id === message.turn_id)
+    const overlap = messagesOverlap(previous.content, message.content)
+    if (sameTurn || overlap) {
+      coalesced[coalesced.length - 1] = mergeAssistantMessage(previous, message)
+      continue
+    }
+
+    coalesced.push(message)
+  }
+
+  return coalesced
+}
+
 export default async function ChatPage({ searchParams }: ChatPageProps = {}) {
   const current = await getCurrentUser()
   if (!current.authenticated) {
@@ -118,7 +182,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps = {}) {
   })
   const historyItems = history.ok ? sessionHistory(history.data) : []
   let displaySessionId = sessionId
-  let initialMessages = transcript?.ok ? transcriptMessages(transcript.data) : []
+  let initialMessages = transcript?.ok ? coalesceAssistantMessages(transcriptMessages(transcript.data)) : []
 
   if (requestedDisplaySessionId && requestedDisplaySessionId !== sessionId) {
     const requestedTranscript = await backendRequest(
@@ -128,7 +192,9 @@ export default async function ChatPage({ searchParams }: ChatPageProps = {}) {
         sessionToken: current.sessionToken,
       }
     )
-    const requestedMessages = requestedTranscript.ok ? transcriptMessages(requestedTranscript.data) : []
+    const requestedMessages = requestedTranscript.ok
+      ? coalesceAssistantMessages(transcriptMessages(requestedTranscript.data))
+      : []
     if (requestedMessages.length > 0) {
       displaySessionId = requestedDisplaySessionId
       initialMessages = requestedMessages
@@ -142,7 +208,9 @@ export default async function ChatPage({ searchParams }: ChatPageProps = {}) {
         sessionToken: current.sessionToken,
       }
     )
-    const fallbackMessages = fallbackTranscript.ok ? transcriptMessages(fallbackTranscript.data) : []
+    const fallbackMessages = fallbackTranscript.ok
+      ? coalesceAssistantMessages(transcriptMessages(fallbackTranscript.data))
+      : []
     if (fallbackMessages.length > 0) {
       displaySessionId = fallbackSession.session_id
       initialMessages = fallbackMessages

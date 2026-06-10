@@ -8,6 +8,10 @@ class SaveSessionMessageRequest(BaseModel):
     session_id: str
     role: str
     content: str
+    turn_id: Optional[str] = None
+    external_message_id: Optional[str] = None
+    sync_status: str = "complete"
+    dify_conversation_id: Optional[str] = None
 
 
 class SaveUserProfileRequest(BaseModel):
@@ -32,6 +36,8 @@ class SaveSessionSummaryRequest(BaseModel):
 class DifyTurnPrepRequest(BaseModel):
     user_id: str
     query: str
+    auto_finalize_session: bool = False
+    target_session_id: Optional[str] = None
 
 
 class FinalizeSessionRequest(BaseModel):

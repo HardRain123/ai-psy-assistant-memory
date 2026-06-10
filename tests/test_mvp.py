@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -30,6 +31,7 @@ from fastapi.testclient import TestClient
 
 from app.db import transaction
 from app.main import app
+from app.services.dify_auto_finalize import AUTO_FINALIZE_MARKER, DifyAutoFinalizeResult
 from app.services.quality import build_quality_plan, repair_relationship_prompt_rules
 from app.services.session_tasks import run_session_task_once
 
@@ -186,6 +188,36 @@ class MvpApiTests(unittest.TestCase):
         self.assertIn(query, transcript["transcript_text"])
         self.assertEqual(client.get(f"/care-plan/{user_id}").json()["plan_text"], data["plan_text"])
 
+    def test_dify_turn_prep_auto_finalize_trigger_is_internal(self):
+        user_id = "turn-prep-auto-finalize-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "我最近项目压力很大。"},
+        )
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "等待 AI 的时候总会切去打游戏。"},
+        )
+        make_latest_session_expired(user_id, days_ago=1)
+
+        query = f"{AUTO_FINALIZE_MARKER} target_session_id={session_id}"
+        response = client.post("/dify/turn-prep", json={"user_id": user_id, "query": query})
+        data = response.json()
+
+        self.assertTrue(data["success"])
+        self.assertTrue(data["auto_finalize_session"])
+        self.assertFalse(data["user_message_saved"])
+        self.assertEqual(data["session_id"], session_id)
+        self.assertEqual(data["remaining_minutes"], 0)
+        self.assertFalse(data["can_continue"])
+        self.assertIn("项目压力", data["transcript_text"])
+        self.assertNotIn(AUTO_FINALIZE_MARKER, data["transcript_text"])
+
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        self.assertNotIn(AUTO_FINALIZE_MARKER, transcript["transcript_text"])
+
     def test_session_message_repairs_dify_utf8_mojibake(self):
         user_id = "mojibake-user"
         session = client.get(f"/session/status/{user_id}").json()
@@ -222,6 +254,335 @@ class MvpApiTests(unittest.TestCase):
 
         self.assertEqual(history["sessions"][0]["session_id"], session_id)
         self.assertEqual(history["sessions"][0]["message_count"], 2)
+
+    def test_session_message_upserts_turn_metadata_and_session_conversation(self):
+        user_id = "turn-upsert-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        turn_id = "turn-123"
+
+        user_saved = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "user",
+                "content": "same prompt",
+                "turn_id": turn_id,
+            },
+        ).json()
+        self.assertTrue(user_saved["success"])
+
+        streaming = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "partial",
+                "turn_id": turn_id,
+                "sync_status": "streaming",
+                "dify_conversation_id": "conv-123",
+            },
+        ).json()
+        complete = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "full answer",
+                "turn_id": turn_id,
+                "external_message_id": "msg-123",
+                "sync_status": "complete",
+                "dify_conversation_id": "conv-123",
+            },
+        ).json()
+        duplicate_complete = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "full answer",
+                "turn_id": turn_id,
+                "external_message_id": "msg-123",
+                "sync_status": "complete",
+                "dify_conversation_id": "conv-123",
+            },
+        ).json()
+
+        self.assertTrue(streaming["success"])
+        self.assertTrue(complete["success"])
+        self.assertTrue(duplicate_complete["success"])
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        assistant_messages = [item for item in transcript["messages"] if item["role"] == "assistant"]
+        self.assertEqual(len(assistant_messages), 1)
+        self.assertEqual(assistant_messages[0]["content"], "full answer")
+        self.assertEqual(assistant_messages[0]["turn_id"], turn_id)
+        self.assertEqual(assistant_messages[0]["external_message_id"], "msg-123")
+        self.assertEqual(assistant_messages[0]["sync_status"], "complete")
+        self.assertEqual(client.get(f"/session/status/{user_id}").json()["dify_conversation_id"], "conv-123")
+
+    def test_session_message_merges_dify_duplicate_after_streaming_snapshot(self):
+        user_id = "stream-dify-duplicate-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "hello"},
+        )
+        streaming = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "这次正式咨询已经结束了，所以今天先不继续",
+                "turn_id": "turn-stream",
+                "sync_status": "streaming",
+            },
+        ).json()
+        dify_saved = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "这次正式咨询已经结束了，所以今天先不继续展开新的内容。",
+            },
+        ).json()
+
+        self.assertTrue(streaming["success"])
+        self.assertTrue(dify_saved["success"])
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        assistant_messages = [item for item in transcript["messages"] if item["role"] == "assistant"]
+        self.assertEqual(len(assistant_messages), 1)
+        self.assertEqual(assistant_messages[0]["content"], "这次正式咨询已经结束了，所以今天先不继续展开新的内容。")
+        self.assertEqual(assistant_messages[0]["turn_id"], "turn-stream")
+
+        with transaction() as cur:
+            cur.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ? AND role = 'assistant'", (session_id,))
+            self.assertEqual(cur.fetchone()[0], 1)
+
+    def test_session_message_merges_streaming_duplicate_after_dify_save(self):
+        user_id = "dify-stream-duplicate-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "hello"},
+        )
+        dify_saved = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "你说得对，我之前确实问偏了。",
+            },
+        ).json()
+        complete = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "你说得对，我之前确实问偏了。",
+                "turn_id": "turn-complete",
+                "external_message_id": "msg-complete",
+                "sync_status": "complete",
+            },
+        ).json()
+
+        self.assertTrue(dify_saved["success"])
+        self.assertTrue(complete["success"])
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        assistant_messages = [item for item in transcript["messages"] if item["role"] == "assistant"]
+        self.assertEqual(len(assistant_messages), 1)
+        self.assertEqual(assistant_messages[0]["content"], "你说得对，我之前确实问偏了。")
+        self.assertEqual(assistant_messages[0]["turn_id"], "turn-complete")
+        self.assertEqual(assistant_messages[0]["external_message_id"], "msg-complete")
+
+        with transaction() as cur:
+            cur.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ? AND role = 'assistant'", (session_id,))
+            self.assertEqual(cur.fetchone()[0], 1)
+
+    def test_session_message_assigns_dify_assistant_to_latest_user_turn(self):
+        user_id = "dify-turn-infer-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        turn_id = "turn-infer"
+
+        client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "user",
+                "content": "hello",
+                "turn_id": turn_id,
+            },
+        )
+        client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "streaming draft",
+                "turn_id": turn_id,
+                "sync_status": "streaming",
+            },
+        )
+        dify_saved = client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "role": "assistant",
+                "content": "final answer from dify",
+            },
+        ).json()
+
+        self.assertTrue(dify_saved["success"])
+        self.assertEqual(dify_saved["turn_id"], turn_id)
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        assistant_messages = [item for item in transcript["messages"] if item["role"] == "assistant"]
+        self.assertEqual(len(assistant_messages), 1)
+        self.assertEqual(assistant_messages[0]["content"], "final answer from dify")
+        self.assertEqual(assistant_messages[0]["turn_id"], turn_id)
+
+        with transaction() as cur:
+            cur.execute("SELECT COUNT(*) FROM session_messages WHERE session_id = ? AND role = 'assistant'", (session_id,))
+            self.assertEqual(cur.fetchone()[0], 1)
+
+    def test_session_transcript_hides_existing_duplicate_assistant_rows(self):
+        user_id = "existing-duplicate-assistant-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        now = datetime.now().isoformat()
+
+        with transaction() as cur:
+            cur.execute(
+                """
+                INSERT INTO session_messages (
+                    user_id, session_id, turn_id, role, content,
+                    risk_level, sync_status, created_at, updated_at
+                )
+                VALUES (?, ?, ?, 'user', 'hello', 'none', 'complete', ?, ?)
+                """,
+                (user_id, session_id, "turn-existing-duplicate", now, now),
+            )
+            cur.execute(
+                """
+                INSERT INTO session_messages (
+                    user_id, session_id, turn_id, role, content,
+                    risk_level, sync_status, created_at, updated_at
+                )
+                VALUES (?, ?, ?, 'assistant', 'same answer', 'none', 'complete', ?, ?)
+                """,
+                (user_id, session_id, "turn-existing-duplicate", now, now),
+            )
+            cur.execute(
+                """
+                INSERT INTO session_messages (
+                    user_id, session_id, role, content,
+                    risk_level, sync_status, created_at, updated_at
+                )
+                VALUES (?, ?, 'assistant', 'same answer', 'none', 'complete', ?, ?)
+                """,
+                (user_id, session_id, now, now),
+            )
+
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        assistant_messages = [item for item in transcript["messages"] if item["role"] == "assistant"]
+        self.assertEqual(len(assistant_messages), 1)
+        self.assertEqual(assistant_messages[0]["content"], "same answer")
+        self.assertEqual(assistant_messages[0]["turn_id"], "turn-existing-duplicate")
+
+    def test_session_summary_upserts_by_user_and_session(self):
+        user_id = "summary-upsert-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+
+        first = client.post(
+            "/session-summary",
+            json={"user_id": user_id, "session_id": session_id, "summary": "old summary"},
+        ).json()
+        second = client.post(
+            "/session-summary",
+            json={
+                "user_id": user_id,
+                "session_id": session_id,
+                "summary": "new summary",
+                "core_topics": "project",
+                "next_focus": "next step",
+            },
+        ).json()
+
+        self.assertTrue(first["success"])
+        self.assertTrue(second["success"])
+        self.assertTrue(second["updated_existing"])
+        with transaction() as cur:
+            cur.execute("SELECT COUNT(*), MAX(summary), MAX(core_topics) FROM session_summaries WHERE session_id = ?", (session_id,))
+            count, summary, core_topics = cur.fetchone()
+            self.assertEqual(count, 1)
+            self.assertEqual(summary, "new summary")
+            self.assertEqual(core_topics, "project")
+
+    def test_session_message_turn_id_bypasses_legacy_duplicate_window(self):
+        user_id = "turn-duplicate-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+
+        for turn_id in ["turn-a", "turn-b"]:
+            saved = client.post(
+                "/session-message",
+                json={
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "role": "user",
+                    "content": "same prompt",
+                    "turn_id": turn_id,
+                },
+            ).json()
+            self.assertTrue(saved["success"])
+
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+        user_messages = [item for item in transcript["messages"] if item["role"] == "user"]
+        self.assertEqual(len(user_messages), 2)
+        self.assertEqual([item["turn_id"] for item in user_messages], ["turn-a", "turn-b"])
+
+    def test_session_transcript_coalesces_legacy_streaming_prefix_rows(self):
+        user_id = "legacy-stream-prefix-user"
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "hello"},
+        )
+
+        for content in [
+            "你",
+            "你等",
+            "你等AI",
+            "你等AI提示完成的时候，除了打游戏，还会做什么别的事吗？",
+        ]:
+            saved = client.post(
+                "/session-message",
+                json={"user_id": user_id, "session_id": session_id, "role": "assistant", "content": content},
+            ).json()
+            self.assertTrue(saved["success"])
+
+        transcript = client.get(f"/session-transcript/{session_id}").json()
+
+        self.assertEqual(
+            [item["content"] for item in transcript["messages"]],
+            ["hello", "你等AI提示完成的时候，除了打游戏，还会做什么别的事吗？"],
+        )
 
     def test_low_content_session_skips_summary_memory_and_formal_handoff(self):
         user_id = "low-content-user"
@@ -361,6 +722,94 @@ class MvpApiTests(unittest.TestCase):
         with transaction() as cur:
             cur.execute("SELECT status FROM sessions WHERE session_id = ?", (old_session_id,))
             self.assertEqual(cur.fetchone()[0], "ended")
+
+    def test_yesterday_open_session_uses_dify_summary_before_new_pending_session(self):
+        user_id = "yesterday-dify-finalize-user"
+        old = client.get(f"/session/status/{user_id}").json()
+        old_session_id = old["session_id"]
+        for content in [
+            "我最近项目压力很大，进度总是被拖慢。",
+            "等待 AI 输出的时候，我经常切去打游戏，然后又自责。",
+        ]:
+            client.post(
+                "/session-message",
+                json={"user_id": user_id, "session_id": old_session_id, "role": "user", "content": content},
+            )
+        client.post(
+            "/session-message",
+            json={
+                "user_id": user_id,
+                "session_id": old_session_id,
+                "role": "assistant",
+                "content": "我先帮你把项目和游戏切换这条线记下来。",
+                "dify_conversation_id": "conv-yesterday",
+            },
+        )
+        make_latest_session_expired(user_id, days_ago=1)
+        calls = []
+
+        def fake_dify_auto_finalize(user_id: str, session_id: str, conversation_id: str):
+            calls.append({"user_id": user_id, "session_id": session_id, "conversation_id": conversation_id})
+            now = datetime.now().isoformat()
+            with transaction() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO session_summaries (
+                        user_id, session_id, summary, core_topics, next_focus,
+                        risk_level, created_at, updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        user_id,
+                        session_id,
+                        "Dify generated summary for yesterday.",
+                        "project pressure, game switching",
+                        "review the smallest project step",
+                        "none",
+                        now,
+                        now,
+                    ),
+                )
+                cur.execute(
+                    """
+                    UPDATE sessions
+                    SET summary = ?, updated_at = ?
+                    WHERE user_id = ? AND session_id = ?
+                    """,
+                    ("Dify generated summary for yesterday.", now, user_id, session_id),
+                )
+            return DifyAutoFinalizeResult(
+                attempted=True,
+                success=True,
+                reason="fake_dify_completed",
+                conversation_id=conversation_id,
+                message_id="msg-yesterday",
+                answer="done",
+            )
+
+        with patch("app.services.session_autofinalize.request_dify_auto_finalize", side_effect=fake_dify_auto_finalize):
+            current = client.get(f"/session/status/{user_id}").json()
+            repeated = client.get(f"/session/status/{user_id}").json()
+
+        self.assertEqual(current["status"], "pending")
+        self.assertNotEqual(current["session_id"], old_session_id)
+        self.assertEqual(repeated["session_id"], current["session_id"])
+        self.assertEqual(calls, [{"user_id": user_id, "session_id": old_session_id, "conversation_id": "conv-yesterday"}])
+
+        with transaction() as cur:
+            cur.execute(
+                "SELECT status, final_saved_at, summary FROM sessions WHERE session_id = ?",
+                (old_session_id,),
+            )
+            status, final_saved_at, session_summary = cur.fetchone()
+            self.assertEqual(status, "ended")
+            self.assertTrue(final_saved_at)
+            self.assertEqual(session_summary, "Dify generated summary for yesterday.")
+            cur.execute("SELECT COUNT(*), MAX(summary) FROM session_summaries WHERE session_id = ?", (old_session_id,))
+            count, summary = cur.fetchone()
+            self.assertEqual(count, 1)
+            self.assertEqual(summary, "Dify generated summary for yesterday.")
 
     def test_background_task_is_idempotent(self):
         session = client.get("/session/status/task-user").json()

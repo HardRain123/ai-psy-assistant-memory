@@ -360,6 +360,7 @@ def _create_schema(cur):
             id TEXT PRIMARY KEY,
             session_id TEXT UNIQUE,
             user_id TEXT NOT NULL,
+            dify_conversation_id TEXT,
             started_at TEXT NOT NULL,
             ended_at TEXT,
             final_saved_at TEXT,
@@ -413,10 +414,14 @@ def _create_schema(cur):
             id {serial_pk},
             user_id TEXT NOT NULL,
             session_id TEXT NOT NULL,
+            turn_id TEXT,
+            external_message_id TEXT,
             role TEXT NOT NULL,
             content TEXT NOT NULL,
             risk_level TEXT NOT NULL DEFAULT 'none',
-            created_at TEXT NOT NULL
+            sync_status TEXT NOT NULL DEFAULT 'complete',
+            created_at TEXT NOT NULL,
+            updated_at TEXT
         )
         """
     )
@@ -546,6 +551,7 @@ def _migrate_existing_schema(cur):
     ensure_column(cur, "memories", "updated_at", "updated_at TEXT")
 
     ensure_column(cur, "sessions", "session_id", "session_id TEXT")
+    ensure_column(cur, "sessions", "dify_conversation_id", "dify_conversation_id TEXT")
     ensure_column(cur, "sessions", "final_saved_at", "final_saved_at TEXT")
     ensure_column(cur, "sessions", "auto_close_at", "auto_close_at TEXT")
     ensure_column(cur, "sessions", "close_reason", "close_reason TEXT")
@@ -563,7 +569,11 @@ def _migrate_existing_schema(cur):
     ensure_column(cur, "session_summaries", "risk_level", "risk_level TEXT NOT NULL DEFAULT 'none'")
     ensure_column(cur, "session_summaries", "updated_at", "updated_at TEXT")
     ensure_column(cur, "user_profiles", "created_at", "created_at TEXT")
+    ensure_column(cur, "session_messages", "turn_id", "turn_id TEXT")
+    ensure_column(cur, "session_messages", "external_message_id", "external_message_id TEXT")
     ensure_column(cur, "session_messages", "risk_level", "risk_level TEXT NOT NULL DEFAULT 'none'")
+    ensure_column(cur, "session_messages", "sync_status", "sync_status TEXT NOT NULL DEFAULT 'complete'")
+    ensure_column(cur, "session_messages", "updated_at", "updated_at TEXT")
     ensure_column(cur, "care_plans", "created_at", "created_at TEXT")
     ensure_column(cur, "session_task_history", "result", "result TEXT")
     ensure_column(cur, "session_task_history", "message", "message TEXT")
@@ -581,6 +591,8 @@ def _migrate_existing_schema(cur):
     cur.execute("UPDATE memories SET updated_at = created_at WHERE updated_at IS NULL")
     cur.execute("UPDATE memories SET confidence = 'medium' WHERE confidence IS NULL OR confidence = ''")
     cur.execute("UPDATE session_summaries SET updated_at = created_at WHERE updated_at IS NULL")
+    cur.execute("UPDATE session_messages SET sync_status = 'complete' WHERE sync_status IS NULL OR sync_status = ''")
+    cur.execute("UPDATE session_messages SET updated_at = created_at WHERE updated_at IS NULL")
     cur.execute("UPDATE user_profiles SET created_at = updated_at WHERE created_at IS NULL")
     cur.execute("UPDATE care_plans SET created_at = updated_at WHERE created_at IS NULL")
 
@@ -608,6 +620,8 @@ def _create_indexes(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_open_auto_close ON sessions(status, auto_close_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_memories_user_created ON memories(user_id, created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_session_created ON session_messages(session_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_turn_role ON session_messages(session_id, turn_id, role)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_messages_external ON session_messages(external_message_id)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_session_task_unique ON session_task(session_id, task_type)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_session_task_status ON session_task(status, scheduled_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_task_history_session ON session_task_history(session_id, created_at)")
