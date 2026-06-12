@@ -27,6 +27,12 @@ type SessionHistoryItem = {
   message_count?: number
 }
 
+type SafetyGuidance = {
+  title?: string
+  actions?: string[]
+  coverage_message?: string
+}
+
 const SESSION_SECONDS = 50 * 60
 const STREAM_FLUSH_INTERVAL_MS = 80
 const ASSISTANT_SYNC_ATTEMPTS = 30
@@ -97,9 +103,17 @@ export function ChatClient({
   sessionHistory?: SessionHistoryItem[]
 }) {
   const router = useRouter()
+  const sessionId = initialSessionStatus?.session_id || ''
+  const conversationStorageKey = sessionId
+    ? `psy-chat-conversation:${user.user_id}:${sessionId}`
+    : `psy-chat-conversation:${user.user_id}`
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [input, setInput] = useState('')
-  const [conversationId, setConversationId] = useState('')
+  const [conversationId, setConversationId] = useState(() => {
+    const backendConversationId = initialSessionStatus?.dify_conversation_id || ''
+    if (typeof window === 'undefined') return backendConversationId
+    return window.localStorage.getItem(conversationStorageKey) || backendConversationId
+  })
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(
     remainingSecondsFromStatus(initialSessionStatus)
   )
@@ -109,18 +123,15 @@ export function ChatClient({
   const [resettingSession, setResettingSession] = useState(false)
   const [error, setError] = useState('')
   const [authActionRequired, setAuthActionRequired] = useState(false)
+  const [safetyGuidance, setSafetyGuidance] = useState<SafetyGuidance | null>(null)
   const messagesScrollRef = useRef<HTMLDivElement | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
   const conversationIdRef = useRef('')
   const syncAttemptedRef = useRef(false)
   const timeLabel = useMemo(() => formatRemaining(remainingSeconds, timerStarted), [remainingSeconds, timerStarted])
-  const sessionId = initialSessionStatus?.session_id || ''
   const [showingHistoricalMessages, setShowingHistoricalMessages] = useState(
     Boolean(initialMessagesSessionId && sessionId && initialMessagesSessionId !== sessionId)
   )
-  const conversationStorageKey = sessionId
-    ? `psy-chat-conversation:${user.user_id}:${sessionId}`
-    : `psy-chat-conversation:${user.user_id}`
 
   useEffect(() => {
     if (!timerStarted) return
@@ -137,11 +148,6 @@ export function ChatClient({
     }, 1000)
     return () => window.clearInterval(timer)
   }, [remainingSeconds, timerStarted])
-
-  useEffect(() => {
-    const storedConversationId = window.localStorage.getItem(conversationStorageKey)
-    setConversationId(storedConversationId || initialSessionStatus?.dify_conversation_id || '')
-  }, [conversationStorageKey, initialSessionStatus?.dify_conversation_id])
 
   useEffect(() => {
     conversationIdRef.current = conversationId
@@ -354,7 +360,13 @@ export function ChatClient({
       function handleEvent(raw: string) {
         if (!raw) return
 
-        let event: { type?: string; answer?: string; conversationId?: string; error?: string }
+        let event: {
+          type?: string
+          answer?: string
+          conversationId?: string
+          error?: string
+          guidance?: SafetyGuidance
+        }
         try {
           event = JSON.parse(raw)
         } catch {
@@ -370,6 +382,9 @@ export function ChatClient({
         if (event.type === 'chunk' && event.answer) {
           answer += event.answer
           scheduleAnswerFlush()
+        }
+        if (event.type === 'safety' && event.guidance) {
+          setSafetyGuidance(event.guidance)
         }
       }
 
@@ -485,6 +500,21 @@ export function ChatClient({
         </div>
 
         <div className="border-t border-zinc-200 p-4">
+          {safetyGuidance && (
+            <div className="mb-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm leading-6 text-red-950">
+              <p className="font-semibold">{safetyGuidance.title || '请先保证眼前安全'}</p>
+              {Array.isArray(safetyGuidance.actions) && (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {safetyGuidance.actions.map((action) => (
+                    <li key={action}>{action}</li>
+                  ))}
+                </ul>
+              )}
+              {safetyGuidance.coverage_message && (
+                <p className="mt-2 font-medium">{safetyGuidance.coverage_message}</p>
+              )}
+            </div>
+          )}
           {error && (
             <div className="mb-3 flex flex-col gap-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 sm:flex-row sm:items-center sm:justify-between">
               <p>{error}</p>

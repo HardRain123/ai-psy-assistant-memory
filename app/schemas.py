@@ -12,6 +12,13 @@ class SaveSessionMessageRequest(BaseModel):
     external_message_id: Optional[str] = None
     sync_status: str = "complete"
     dify_conversation_id: Optional[str] = None
+    source: str = "keyword"
+    source_risk_level: Optional[str] = None
+    final_risk_level: Optional[str] = None
+    immediate_action_required: bool = False
+    risk_flags: list[str] = Field(default_factory=list)
+    risk_reason: str = ""
+    source_evidence: dict = Field(default_factory=dict)
 
 
 class SaveUserProfileRequest(BaseModel):
@@ -92,6 +99,13 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     inviteCode: str
+    policyVersion: str = ""
+    adultConfirmed: bool = False
+    aiServiceConsent: bool = False
+    sensitiveDataConsent: bool = False
+    conversationStorageConsent: bool = False
+    longTermMemoryConsent: bool = False
+    humanSafetyReviewConsent: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -132,3 +146,61 @@ class CreateInviteRequest(BaseModel):
 
 class RevokeInviteRequest(BaseModel):
     invite_id: int
+
+
+class SafetyIncidentCreateRequest(BaseModel):
+    user_id: str
+    session_id: str = ""
+    source: str
+    source_risk_level: str
+    final_risk_level: str
+    immediate_action_required: bool = False
+    risk_flags: list[str] = Field(default_factory=list)
+    reason: str = ""
+    source_evidence: dict = Field(default_factory=dict)
+    trigger_message_id: Optional[int] = None
+
+
+class SafetyIncidentActionRequest(BaseModel):
+    action: str
+    note: str = ""
+    follow_up_at: Optional[str] = None
+
+
+class SensitiveTranscriptAccessRequest(BaseModel):
+    reason: str
+
+
+class ConsentUpdateRequest(BaseModel):
+    policyVersion: str
+    adultConfirmed: bool
+    aiServiceConsent: bool
+    sensitiveDataConsent: bool
+    conversationStorageConsent: bool
+    longTermMemoryConsent: bool
+    humanSafetyReviewConsent: bool
+
+
+class AccountDeletionRequest(BaseModel):
+    confirm_text: str = ""
+
+
+class AccountDeletionCancelRequest(BaseModel):
+    request_id: str
+    cancellation_token: str
+
+
+class ComplaintCreateRequest(BaseModel):
+    category: str = "service"
+    content: str
+
+
+class LaunchControlUpdateRequest(BaseModel):
+    paused: bool
+    note: str
+
+
+class SafetyOperatorRoleRequest(BaseModel):
+    user_id: str
+    role: str
+    enabled: bool = True

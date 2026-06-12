@@ -18,6 +18,14 @@ export function RegisterForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [consents, setConsents] = useState({
+    adultConfirmed: false,
+    aiServiceConsent: false,
+    sensitiveDataConsent: false,
+    conversationStorageConsent: false,
+    longTermMemoryConsent: false,
+    humanSafetyReviewConsent: false,
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -38,6 +46,10 @@ export function RegisterForm() {
       setError('两次输入的密码不一致。')
       return
     }
+    if (Object.values(consents).some((value) => !value)) {
+      setError('请逐项确认年龄要求和全部必要授权。')
+      return
+    }
 
     setLoading(true)
     try {
@@ -49,6 +61,8 @@ export function RegisterForm() {
           username: username.trim(),
           email: email.trim(),
           password,
+          policyVersion: '2026-06-12.1',
+          ...consents,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -79,6 +93,34 @@ export function RegisterForm() {
           required
         />
       </label>
+
+      <fieldset className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+        <legend className="px-1 text-sm font-semibold text-zinc-900">年龄与分项授权</legend>
+        {[
+          ['adultConfirmed', '我确认已年满 18 岁。'],
+          ['aiServiceConsent', '我同意使用 AI 服务，并理解它不替代医疗诊断或真人咨询。'],
+          ['sensitiveDataConsent', '我同意处理对话中涉及的心理健康敏感信息。'],
+          ['conversationStorageConsent', '我同意保存对话，用于本账号的连续服务。'],
+          ['longTermMemoryConsent', '我同意生成和保存长期记忆、总结与计划。'],
+          ['humanSafetyReviewConsent', '我同意在安全风险触发时由授权人员进行人工复核。'],
+        ].map(([key, label]) => (
+          <label key={key} className="flex items-start gap-3 text-sm leading-6 text-zinc-700">
+            <input
+              type="checkbox"
+              checked={consents[key as keyof typeof consents]}
+              onChange={(event) =>
+                setConsents((current) => ({ ...current, [key]: event.target.checked }))
+              }
+              className="mt-1"
+            />
+            <span>{label}</span>
+          </label>
+        ))}
+        <p className="text-xs leading-5 text-zinc-500">
+          人工安全值守时间为工作日 09:00–18:00（中国时间），不是 7×24 小时危机服务。
+          首版不收集手机号或紧急联系人。
+        </p>
+      </fieldset>
 
       <label className="block text-sm font-medium text-zinc-700">
         账号
@@ -135,7 +177,14 @@ export function RegisterForm() {
 
       <button
         type="submit"
-        disabled={loading || !username.trim() || !email.trim() || !password || !confirmPassword}
+        disabled={
+          loading ||
+          !username.trim() ||
+          !email.trim() ||
+          !password ||
+          !confirmPassword ||
+          Object.values(consents).some((value) => !value)
+        }
         className="w-full rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-40"
       >
         {loading ? '注册中...' : '注册并进入聊天'}

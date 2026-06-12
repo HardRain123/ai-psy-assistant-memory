@@ -159,6 +159,13 @@ export default async function ChatPage({ searchParams }: ChatPageProps = {}) {
   if (!current.authenticated) {
     redirect('/login')
   }
+  const consentStatus = await backendRequest('/internal/account/consents', {
+    method: 'GET',
+    sessionToken: current.sessionToken,
+  })
+  if (!current.user.is_admin && (!consentStatus.ok || !consentStatus.data?.complete)) {
+    redirect('/consent')
+  }
   const params = searchParams ? await searchParams : {}
   const requestedDisplaySessionId = firstParam(params.showSession)
 

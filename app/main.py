@@ -5,15 +5,17 @@ from fastapi import Depends, FastAPI
 from app.config import ENABLE_DEBUG_ENDPOINTS, TASK_WORKER_ENABLED
 from app.db import init_db, transaction
 from app.errors import install_exception_handlers
-from app.routers import admin, auth, care_plan, context, dify, handoff, health, memory, messages, profile, screening, sessions, testing
+from app.routers import account, admin, auth, care_plan, context, dify, handoff, health, memory, messages, profile, safety, screening, sessions, testing
 from app.security import require_backend_token
 from app.services.auth import bootstrap_admin
+from app.services.compliance import bootstrap_policy_versions
 from app.services.session_tasks import task_worker_loop
 
 
 init_db()
 with transaction() as cur:
     bootstrap_admin(cur)
+    bootstrap_policy_versions(cur)
 
 app = FastAPI()
 install_exception_handlers(app)
@@ -22,7 +24,9 @@ protected = [Depends(require_backend_token)]
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(account.router)
 app.include_router(admin.router)
+app.include_router(safety.router)
 app.include_router(memory.router, dependencies=protected)
 app.include_router(sessions.router, dependencies=protected)
 app.include_router(context.router, dependencies=protected)

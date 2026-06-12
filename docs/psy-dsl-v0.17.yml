@@ -23,7 +23,7 @@ workflow:
     selector:
     - env
     - BACKEND_SHARED_TOKEN
-    value: dTDLHeK6pop+uRsJqX7Ew+B39FYWmFYNPLbD0/ufiYw=
+    value: ''
     value_type: string
   features:
     file_upload:
@@ -413,10 +413,22 @@ workflow:
     - data:
         isInLoop: false
         sourceType: code
-        targetType: llm
-      id: 1779872124969-source-1779205391389-target
+        targetType: http-request
+      id: 1779872124969-source-1781231000001-target
       selected: false
       source: '1779872124969'
+      sourceHandle: source
+      target: '1781231000001'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: http-request
+        targetType: llm
+      id: 1781231000001-source-1779205391389-target
+      selected: false
+      source: '1781231000001'
       sourceHandle: source
       target: '1779205391389'
       targetHandle: target
@@ -1664,6 +1676,54 @@ workflow:
       positionAbsolute:
         x: 2784
         y: 488
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 243
+    - data:
+        authorization:
+          config: null
+          type: no-auth
+        body:
+          data:
+          - id: key-value-safety-incident
+            key: ''
+            type: text
+            value: "{\n  \"user_id\": \"{{#1779204939074.user_id#}}\",\n  \"session_id\"\
+              : \"{{#1780825876878.session_id#}}\",\n  \"source\": \"dify\",\n\
+              \  \"source_risk_level\": \"{{#1779872124969.risk_level#}}\",\n  \"\
+              final_risk_level\": \"{{#1779872124969.risk_level#}}\",\n  \"immediate_action_required\"\
+              : false,\n  \"risk_flags\": [],\n  \"reason\": \"{{#1779872124969.reason#}}\"\
+              ,\n  \"source_evidence\": {\n    \"risk_level\": \"{{#1779872124969.risk_level#}}\"\
+              ,\n    \"need_safety_check\": {{#1779872124969.need_safety_check#}},\n\
+              \    \"reason\": \"{{#1779872124969.reason#}}\"\n  }\n}"
+          type: json
+        headers: X-Backend-Token:{{#env.BACKEND_SHARED_TOKEN#}}
+        method: post
+        params: ''
+        retry_config:
+          max_retries: 3
+          retry_enabled: true
+          retry_interval: 100
+        selected: false
+        ssl_verify: true
+        timeout:
+          max_connect_timeout: 0
+          max_read_timeout: 0
+          max_write_timeout: 0
+        title: 回传风险评估
+        type: http-request
+        url: https://ai-assistant-psy-mvp.619569391.workers.dev/internal/safety/incidents
+        variables: []
+      height: 155
+      id: '1781231000001'
+      position:
+        x: 1543
+        y: 334.0928571428572
+      positionAbsolute:
+        x: 1543
+        y: 334.0928571428572
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -3312,6 +3372,129 @@ workflow:
       positionAbsolute:
         x: 686
         y: 130.42619047619053
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 243
+    - data:
+        code: |-
+          import json
+
+
+          def as_bool(value, default=False):
+              if isinstance(value, bool):
+                  return value
+              if isinstance(value, (int, float)):
+                  return value != 0
+              if isinstance(value, str):
+                  return value.strip().lower() in ["true", "1", "yes", "y", "是"]
+              return default
+
+
+          def main(
+              end_intent_text: str = "",
+              current_query: str = "",
+              can_continue=True,
+              session_stage: str = "",
+              remaining_minutes=50,
+          ) -> dict:
+              try:
+                  data = json.loads(end_intent_text) if isinstance(end_intent_text, str) and end_intent_text.strip() else {}
+              except Exception:
+                  data = {}
+
+              query = (current_query or "").strip()
+              explicit_end_markers = [
+                  "不想聊了", "先不聊了", "今天到这里", "今天就到这",
+                  "结束咨询", "结束对话", "下次再聊", "我想结束",
+              ]
+              fatigue_markers = ["困了", "好困", "累了", "想睡", "没力气"]
+              explicit_end = any(marker in query for marker in explicit_end_markers)
+              fatigue_only = any(marker in query for marker in fatigue_markers) and not explicit_end
+
+              model_wants_end = as_bool(data.get("user_wants_end"), False)
+              confidence = data.get("confidence", 0)
+              try:
+                  confidence = float(confidence)
+              except Exception:
+                  confidence = 0.0
+
+              if fatigue_only:
+                  return {
+                      "user_wants_end": False,
+                      "should_close": False,
+                      "confidence": confidence,
+                      "reason": "fatigue_without_explicit_end",
+                  }
+
+              try:
+                  remaining = float(remaining_minutes)
+              except Exception:
+                  remaining = 50.0
+              forced_close = (
+                  not as_bool(can_continue, True)
+                  or remaining <= 0
+                  or (session_stage or "").strip().lower() in ["closing", "ending", "ended", "closed"]
+              )
+              user_wants_end = explicit_end or (model_wants_end and confidence >= 0.7)
+              return {
+                  "user_wants_end": user_wants_end,
+                  "should_close": forced_close or user_wants_end,
+                  "confidence": confidence,
+                  "reason": "explicit_end" if explicit_end else str(data.get("reason") or "continue"),
+              }
+        code_language: python3
+        outputs:
+          confidence:
+            children: null
+            type: number
+          reason:
+            children: null
+            type: string
+          should_close:
+            children: null
+            type: boolean
+          user_wants_end:
+            children: null
+            type: boolean
+        selected: false
+        title: 结束意图解析兼容
+        type: code
+        variables:
+        - value_selector:
+          - '1779205391389'
+          - text
+          value_type: string
+          variable: end_intent_text
+        - value_selector:
+          - sys
+          - query
+          value_type: string
+          variable: current_query
+        - value_selector:
+          - '1780825876878'
+          - can_continue
+          value_type: boolean
+          variable: can_continue
+        - value_selector:
+          - '1780825876878'
+          - session_stage
+          value_type: string
+          variable: session_stage
+        - value_selector:
+          - '1780825876878'
+          - remaining_minutes
+          value_type: number
+          variable: remaining_minutes
+      height: 53
+      id: '1779968610422'
+      position:
+        x: 2058
+        y: 1015
+      positionAbsolute:
+        x: 2058
+        y: 1015
       selected: false
       sourcePosition: right
       targetPosition: left

@@ -336,6 +336,209 @@ def _create_schema(cur):
 
     cur.execute(
         f"""
+        CREATE TABLE IF NOT EXISTS user_roles (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            created_by_user_id TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS safety_incidents (
+            id {serial_pk},
+            incident_id TEXT NOT NULL UNIQUE,
+            user_id TEXT NOT NULL,
+            session_id TEXT DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'open',
+            source TEXT NOT NULL,
+            source_risk_level TEXT NOT NULL,
+            final_risk_level TEXT NOT NULL,
+            immediate_action_required INTEGER NOT NULL DEFAULT 0,
+            risk_flags TEXT,
+            reason TEXT,
+            source_evidence TEXT,
+            trigger_message_id INTEGER,
+            assigned_to_user_id TEXT,
+            alert_status TEXT NOT NULL DEFAULT 'not_required',
+            alert_attempt_count INTEGER NOT NULL DEFAULT 0,
+            alert_last_error TEXT,
+            alert_last_attempt_at TEXT,
+            alert_sent_at TEXT,
+            acknowledged_at TEXT,
+            first_response_at TEXT,
+            acknowledgement_due_at TEXT,
+            first_response_due_at TEXT,
+            review_due_at TEXT,
+            follow_up_at TEXT,
+            resolved_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS safety_incident_events (
+            id {serial_pk},
+            incident_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            actor_user_id TEXT,
+            from_status TEXT,
+            to_status TEXT,
+            note TEXT,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS safety_risk_evaluations (
+            id {serial_pk},
+            evaluation_id TEXT NOT NULL UNIQUE,
+            incident_id TEXT,
+            user_id TEXT NOT NULL,
+            session_id TEXT DEFAULT '',
+            source TEXT NOT NULL,
+            source_risk_level TEXT NOT NULL,
+            final_risk_level TEXT NOT NULL,
+            immediate_action_required INTEGER NOT NULL DEFAULT 0,
+            risk_flags TEXT,
+            reason TEXT,
+            source_evidence TEXT,
+            trigger_message_id INTEGER,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS sensitive_access_logs (
+            id {serial_pk},
+            actor_user_id TEXT NOT NULL,
+            target_user_id TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT,
+            reason TEXT NOT NULL,
+            ip_hash TEXT,
+            user_agent TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS policy_versions (
+            id {serial_pk},
+            policy_key TEXT NOT NULL,
+            version TEXT NOT NULL,
+            content_hash TEXT NOT NULL,
+            effective_at TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS user_consents (
+            id {serial_pk},
+            user_id TEXT NOT NULL,
+            consent_key TEXT NOT NULL,
+            policy_version TEXT NOT NULL,
+            granted INTEGER NOT NULL DEFAULT 1,
+            source TEXT NOT NULL,
+            ip_hash TEXT,
+            user_agent TEXT,
+            granted_at TEXT NOT NULL,
+            revoked_at TEXT
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS data_deletion_requests (
+            id {serial_pk},
+            request_id TEXT NOT NULL UNIQUE,
+            user_id TEXT,
+            user_id_hash TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            cancellation_token_hash TEXT,
+            previous_disabled_at TEXT,
+            requested_at TEXT NOT NULL,
+            scheduled_for TEXT NOT NULL,
+            cancelled_at TEXT,
+            completed_at TEXT,
+            backup_delete_by TEXT,
+            backup_status TEXT NOT NULL DEFAULT 'pending',
+            backup_attempt_count INTEGER NOT NULL DEFAULT 0,
+            backup_last_attempt_at TEXT,
+            backup_last_error TEXT,
+            deletion_counts_json TEXT,
+            deletion_manifest_json TEXT,
+            certificate_id TEXT,
+            last_error TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS complaints (
+            id {serial_pk},
+            complaint_id TEXT NOT NULL UNIQUE,
+            user_id TEXT NOT NULL,
+            category TEXT NOT NULL,
+            content TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'submitted',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS compliance_audit_logs (
+            id {serial_pk},
+            action TEXT NOT NULL,
+            actor_user_id TEXT,
+            target_user_id TEXT,
+            resource_id TEXT,
+            details_json TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS launch_controls (
+            control_key TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL DEFAULT 0,
+            reason TEXT,
+            metadata_json TEXT,
+            updated_by_user_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+    cur.execute(
+        f"""
         CREATE TABLE IF NOT EXISTS memories (
             id {serial_pk},
             user_id TEXT NOT NULL,
@@ -581,6 +784,40 @@ def _migrate_existing_schema(cur):
     ensure_column(cur, "handoff_documents", "content_quality", "content_quality TEXT NOT NULL DEFAULT 'formal'")
     ensure_column(cur, "handoff_documents", "generated_reason", "generated_reason TEXT")
     ensure_column(cur, "handoff_documents", "source_session_count", "source_session_count INTEGER NOT NULL DEFAULT 1")
+    ensure_column(cur, "safety_incidents", "source_evidence", "source_evidence TEXT")
+    ensure_column(cur, "safety_incidents", "trigger_message_id", "trigger_message_id INTEGER")
+    ensure_column(cur, "safety_incidents", "assigned_to_user_id", "assigned_to_user_id TEXT")
+    ensure_column(cur, "safety_incidents", "alert_status", "alert_status TEXT NOT NULL DEFAULT 'not_required'")
+    ensure_column(cur, "safety_incidents", "alert_attempt_count", "alert_attempt_count INTEGER NOT NULL DEFAULT 0")
+    ensure_column(cur, "safety_incidents", "alert_last_error", "alert_last_error TEXT")
+    ensure_column(cur, "safety_incidents", "alert_last_attempt_at", "alert_last_attempt_at TEXT")
+    ensure_column(cur, "safety_incidents", "alert_sent_at", "alert_sent_at TEXT")
+    ensure_column(cur, "safety_incidents", "acknowledged_at", "acknowledged_at TEXT")
+    ensure_column(cur, "safety_incidents", "first_response_at", "first_response_at TEXT")
+    ensure_column(cur, "safety_incidents", "acknowledgement_due_at", "acknowledgement_due_at TEXT")
+    ensure_column(cur, "safety_incidents", "first_response_due_at", "first_response_due_at TEXT")
+    ensure_column(cur, "safety_incidents", "review_due_at", "review_due_at TEXT")
+    ensure_column(cur, "safety_incidents", "follow_up_at", "follow_up_at TEXT")
+    ensure_column(cur, "safety_incidents", "resolved_at", "resolved_at TEXT")
+    ensure_column(cur, "data_deletion_requests", "backup_delete_by", "backup_delete_by TEXT")
+    ensure_column(
+        cur,
+        "data_deletion_requests",
+        "backup_status",
+        "backup_status TEXT NOT NULL DEFAULT 'pending'",
+    )
+    ensure_column(
+        cur,
+        "data_deletion_requests",
+        "backup_attempt_count",
+        "backup_attempt_count INTEGER NOT NULL DEFAULT 0",
+    )
+    ensure_column(cur, "data_deletion_requests", "backup_last_attempt_at", "backup_last_attempt_at TEXT")
+    ensure_column(cur, "data_deletion_requests", "backup_last_error", "backup_last_error TEXT")
+    ensure_column(cur, "data_deletion_requests", "deletion_counts_json", "deletion_counts_json TEXT")
+    ensure_column(cur, "data_deletion_requests", "deletion_manifest_json", "deletion_manifest_json TEXT")
+    ensure_column(cur, "data_deletion_requests", "certificate_id", "certificate_id TEXT")
+    ensure_column(cur, "data_deletion_requests", "last_error", "last_error TEXT")
 
     cur.execute("UPDATE sessions SET session_id = id WHERE session_id IS NULL OR session_id = ''")
     cur.execute("UPDATE sessions SET created_at = started_at WHERE created_at IS NULL")
@@ -615,6 +852,25 @@ def _create_indexes(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_account_rate_limits_action_ip ON account_rate_limits(action, ip_hash, created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_admin_audit_created ON admin_audit_logs(created_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_admin_audit_target ON admin_audit_logs(target_user_id, created_at)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_roles_unique ON user_roles(user_id, role)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role, user_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_incidents_queue ON safety_incidents(status, final_risk_level, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_incidents_user ON safety_incidents(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_incidents_session ON safety_incidents(session_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_incidents_alert ON safety_incidents(alert_status, alert_last_attempt_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_events_incident ON safety_incident_events(incident_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_evaluations_user ON safety_risk_evaluations(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_safety_evaluations_incident ON safety_risk_evaluations(incident_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sensitive_access_actor ON sensitive_access_logs(actor_user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sensitive_access_target ON sensitive_access_logs(target_user_id, created_at)")
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_policy_versions_unique ON policy_versions(policy_key, version)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_policy_versions_active ON policy_versions(policy_key, active)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_user_consents_user ON user_consents(user_id, consent_key, granted_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_deletion_requests_due ON data_deletion_requests(status, scheduled_for)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_deletion_requests_user ON data_deletion_requests(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_complaints_user ON complaints(user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_compliance_audit_target ON compliance_audit_logs(target_user_id, created_at)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_launch_controls_enabled ON launch_controls(enabled, updated_at)")
     cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_started ON sessions(user_id, started_at)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_open_auto_close ON sessions(status, auto_close_at)")

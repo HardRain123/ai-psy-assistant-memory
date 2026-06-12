@@ -68,6 +68,7 @@ ERROR_MESSAGES = {
     "admin_user_list_failed": "读取用户列表失败，请稍后再试。",
     "admin_user_export_failed": "导出用户数据失败，请稍后再试。",
     "admin_user_disable_failed": "停用账号失败，请稍后再试。",
+    "admin_user_conversation_history_clear_failed": "清除对话历史失败，请稍后再试。",
     "admin_self_session_reset_failed": "重置会话失败，请稍后再试。",
     "session_not_found": "会话不存在。",
     "user_not_found": "用户不存在。",
@@ -75,6 +76,14 @@ ERROR_MESSAGES = {
     "cannot_disable_admin": "不能停用管理员账号。",
     "debug_operation_failed": "调试操作失败，请稍后再试。",
     "db_health_failed": "数据库状态检查失败，请稍后再试。",
+    "safety_incident_create_failed": "安全工单创建失败，请稍后再试。",
+    "safety_incident_list_failed": "安全工单列表读取失败，请稍后再试。",
+    "safety_incident_get_failed": "安全工单读取失败，请稍后再试。",
+    "safety_incident_action_failed": "安全工单更新失败，请稍后再试。",
+    "safety_incident_not_found": "安全工单不存在。",
+    "invalid_safety_action": "安全工单操作无效。",
+    "sensitive_access_reason_required": "查看完整对话前必须填写至少 8 个字符的访问理由。",
+    "safety_transcript_access_failed": "完整对话读取失败，请稍后再试。",
 }
 
 

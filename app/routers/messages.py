@@ -6,6 +6,13 @@ from fastapi import APIRouter
 from app.db import transaction
 from app.errors import json_error, public_error
 from app.schemas import SaveSessionMessageRequest, SaveSessionSummaryRequest
+from app.services.safety import (
+    assess_backend_risk,
+    create_or_merge_safety_incident,
+    highest_risk_level,
+    is_within_safety_coverage,
+    normalize_risk_level,
+)
 from app.services.sessions import activate_session_if_pending
 from app.utils import clean_text, detect_risk_level, now_iso, repair_mojibake_text
 
@@ -25,6 +32,104 @@ def _clean_optional(value: str | None) -> str:
 def _safe_sync_status(value: str | None) -> str:
     status = clean_text(value or "complete").lower()
     return status if status in MESSAGE_SYNC_STATUSES else "complete"
+
+
+def _message_safety_assessment(req: SaveSessionMessageRequest, content: str) -> dict:
+    backend = assess_backend_risk(content)
+    supplied_source_level = normalize_risk_level(req.source_risk_level)
+    supplied_final_level = normalize_risk_level(req.final_risk_level)
+    final_level = highest_risk_level(
+        backend["final_risk_level"],
+        supplied_source_level,
+        supplied_final_level,
+    )
+    source = (req.source or "keyword").strip().lower()
+    if source not in {"dify", "keyword", "manual"}:
+        source = "keyword"
+    supplied_flags = [str(flag) for flag in req.risk_flags if str(flag).strip()]
+    flags = list(dict.fromkeys([*backend["risk_flags"], *supplied_flags]))
+    reason = clean_text(req.risk_reason) or backend["reason"]
+    source_evidence = dict(req.source_evidence)
+    source_evidence["backend_rule"] = {
+        "source_risk_level": backend["source_risk_level"],
+        "final_risk_level": backend["final_risk_level"],
+        "immediate_action_required": backend["immediate_action_required"],
+        "risk_flags": backend["risk_flags"],
+        "reason": backend["reason"],
+    }
+    return {
+        "source": source,
+        "source_risk_level": highest_risk_level(backend["source_risk_level"], supplied_source_level),
+        "final_risk_level": final_level,
+        "immediate_action_required": bool(
+            req.immediate_action_required or backend["immediate_action_required"]
+        ),
+        "risk_flags": flags,
+        "reason": reason,
+        "source_evidence": source_evidence,
+    }
+
+
+def _record_message_safety(
+    cur,
+    *,
+    req: SaveSessionMessageRequest,
+    message_id: int | None,
+    assessment: dict,
+) -> dict | None:
+    return create_or_merge_safety_incident(
+        cur,
+        user_id=req.user_id,
+        session_id=req.session_id,
+        source=assessment["source"],
+        source_risk_level=assessment["source_risk_level"],
+        final_risk_level=assessment["final_risk_level"],
+        immediate_action_required=assessment["immediate_action_required"],
+        risk_flags=assessment["risk_flags"],
+        reason=assessment["reason"],
+        source_evidence=assessment["source_evidence"],
+        trigger_message_id=message_id,
+    )
+
+
+def _safety_response(assessment: dict, incident: dict | None = None) -> dict:
+    final_risk_level = assessment["final_risk_level"]
+    immediate = bool(
+        incident["immediate_action_required"] if incident else assessment["immediate_action_required"]
+    )
+    coverage_active = is_within_safety_coverage()
+    guidance = None
+    if immediate:
+        guidance = {
+            "title": "请先保证眼前安全",
+            "actions": [
+                "如果危险正在发生，请立即拨打 110 或 120。",
+                "先远离刀具、药物、绳索、高处或其他可能造成伤害的物品和地点。",
+                "不要独处，立即联系一位可信任的人陪在你身边。",
+            ],
+            "coverage_message": (
+                "当前为工作日 09:00–18:00 人工安全值守时段；系统已记录该风险事件。"
+                if coverage_active
+                else "当前不在人工安全值守时段，无人实时查看；事件已记录并排入下一工作日优先队列。"
+            ),
+        }
+    elif final_risk_level == "high" and not coverage_active:
+        guidance = {
+            "title": "当前无人实时值守",
+            "actions": [
+                "如果你可能立即伤害自己或他人，请拨打 110 或 120。",
+                "联系一位可信任的人，并尽量不要独处。",
+            ],
+            "coverage_message": "风险事件已记录并排入下一工作日队列，但当前无人实时查看。",
+        }
+    return {
+        "risk_level": final_risk_level,
+        "immediate_action_required": immediate,
+        "risk_flags": incident["risk_flags"] if incident else assessment["risk_flags"],
+        "safety_incident_id": incident["incident_id"] if incident else None,
+        "safety_coverage_active": coverage_active,
+        "safety_guidance": guidance,
+    }
 
 
 def _update_session_conversation(cur, user_id: str, session_id: str, conversation_id: str, now: str):
@@ -352,7 +457,16 @@ def save_session_message(req: SaveSessionMessageRequest):
                 return public_error("save_session_message_failed")
         return {"success": False, "message": "empty content skipped"}
 
-    risk_level = detect_risk_level(content) if req.role == "user" else "none"
+    assessment = (
+        _message_safety_assessment(req, content)
+        if req.role == "user"
+        else {
+            "final_risk_level": "none",
+            "immediate_action_required": False,
+            "risk_flags": [],
+        }
+    )
+    risk_level = assessment["final_risk_level"]
     try:
         with transaction() as cur:
             if req.role == "user":
@@ -412,13 +526,23 @@ def save_session_message(req: SaveSessionMessageRequest):
                             """,
                             (risk_level, now, req.user_id, req.session_id, req.session_id),
                         )
+                    incident = (
+                        _record_message_safety(
+                            cur,
+                            req=req,
+                            message_id=message_id,
+                            assessment=assessment,
+                        )
+                        if req.role == "user"
+                        else None
+                    )
                     return {
                         "success": True,
                         "message": "message updated",
-                        "risk_level": risk_level,
                         "sync_status": final_status,
                         "turn_id": final_turn_id,
                         "external_message_id": final_external_id,
+                        **_safety_response(assessment, incident),
                     }
 
             if not should_upsert:
@@ -456,7 +580,7 @@ def save_session_message(req: SaveSessionMessageRequest):
 
                 cur.execute(
                     """
-                    SELECT role, content
+                    SELECT id, role, content
                     FROM session_messages
                     WHERE user_id = ?
                       AND session_id = ?
@@ -471,8 +595,22 @@ def save_session_message(req: SaveSessionMessageRequest):
                     ),
                 )
                 recent_row = cur.fetchone()
-                if recent_row and recent_row[0] == req.role and recent_row[1] == content:
-                    return {"success": True, "message": "duplicate message skipped", "risk_level": risk_level}
+                if recent_row and recent_row[1] == req.role and recent_row[2] == content:
+                    incident = (
+                        _record_message_safety(
+                            cur,
+                            req=req,
+                            message_id=recent_row[0],
+                            assessment=assessment,
+                        )
+                        if req.role == "user"
+                        else None
+                    )
+                    return {
+                        "success": True,
+                        "message": "duplicate message skipped",
+                        **_safety_response(assessment, incident),
+                    }
 
             cur.execute(
                 """
@@ -495,6 +633,18 @@ def save_session_message(req: SaveSessionMessageRequest):
                     now,
                 ),
             )
+            cur.execute(
+                """
+                SELECT id
+                FROM session_messages
+                WHERE user_id = ? AND session_id = ? AND role = ? AND created_at = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (req.user_id, req.session_id, req.role, now),
+            )
+            inserted_row = cur.fetchone()
+            message_id = inserted_row[0] if inserted_row else None
             if risk_level != "none":
                 cur.execute(
                     """
@@ -504,6 +654,16 @@ def save_session_message(req: SaveSessionMessageRequest):
                     """,
                     (risk_level, now, req.user_id, req.session_id, req.session_id),
                 )
+            incident = (
+                _record_message_safety(
+                    cur,
+                    req=req,
+                    message_id=message_id,
+                    assessment=assessment,
+                )
+                if req.role == "user"
+                else None
+            )
 
         logger.info(
             "session_message_saved user_id=%s session_id=%s role=%s risk_level=%s",
@@ -515,10 +675,10 @@ def save_session_message(req: SaveSessionMessageRequest):
         return {
             "success": True,
             "message": "session message saved",
-            "risk_level": risk_level,
             "sync_status": sync_status,
             "turn_id": turn_id,
             "external_message_id": external_message_id,
+            **_safety_response(assessment, incident),
         }
 
     except Exception as exc:

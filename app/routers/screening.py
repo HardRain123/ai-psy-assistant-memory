@@ -12,6 +12,7 @@ from app.services.screening import (
     save_screening_batch,
     save_screening_result,
 )
+from app.services.safety import create_or_merge_safety_incident
 
 
 router = APIRouter()
@@ -73,6 +74,35 @@ def submit_screening_batch(req: ScreeningBatchRequest):
                 session_id=req.session_id or "",
                 supplements=req.supplements,
             )
+            safety = result["snapshot"].get("safety", {})
+            flags = safety.get("flags", [])
+            safety_domain = result["snapshot"].get("domains", {}).get("safety", {})
+            current_danger = safety_domain.get("current_danger")
+            incident = create_or_merge_safety_incident(
+                cur,
+                user_id=req.user_id,
+                session_id=req.session_id or "",
+                source="screening",
+                source_risk_level=safety.get("risk_level", "none"),
+                final_risk_level=safety.get("risk_level", "none"),
+                immediate_action_required=(
+                    "current_safety_urgent" in flags or current_danger == "urgent_attention"
+                ),
+                risk_flags=flags,
+                reason="筛查提示当前安全风险",
+                source_evidence={
+                    "screening_ids": [item.get("screening_id") for item in result["results"]],
+                    "instruments": [item.get("instrument") for item in result["results"]],
+                    "stage": result["snapshot"].get("stage"),
+                    "current_danger": current_danger,
+                    "safety_level": safety.get("risk_level", "none"),
+                    "risk_flags": flags,
+                },
+            )
+            result["safety_incident_id"] = incident["incident_id"] if incident else None
+            result["immediate_action_required"] = bool(
+                incident["immediate_action_required"] if incident else False
+            )
         logger.info(
             "screening_batch_saved user_id=%s instruments=%s stage=%s",
             req.user_id,
@@ -100,6 +130,35 @@ def submit_screening(instrument: str, req: ScreeningSubmitRequest):
                 instrument=instrument,
                 answers=req.answers,
                 session_id=req.session_id or "",
+            )
+            safety = result["snapshot"].get("safety", {})
+            flags = safety.get("flags", [])
+            safety_domain = result["snapshot"].get("domains", {}).get("safety", {})
+            current_danger = safety_domain.get("current_danger")
+            incident = create_or_merge_safety_incident(
+                cur,
+                user_id=req.user_id,
+                session_id=req.session_id or "",
+                source="screening",
+                source_risk_level=safety.get("risk_level", result.get("risk_level", "none")),
+                final_risk_level=safety.get("risk_level", result.get("risk_level", "none")),
+                immediate_action_required=(
+                    "current_safety_urgent" in flags or current_danger == "urgent_attention"
+                ),
+                risk_flags=flags,
+                reason="筛查提示当前安全风险",
+                source_evidence={
+                    "screening_id": result.get("screening_id"),
+                    "instrument": result.get("instrument"),
+                    "stage": result["snapshot"].get("stage"),
+                    "current_danger": current_danger,
+                    "safety_level": safety.get("risk_level", "none"),
+                    "risk_flags": flags,
+                },
+            )
+            result["safety_incident_id"] = incident["incident_id"] if incident else None
+            result["immediate_action_required"] = bool(
+                incident["immediate_action_required"] if incident else False
             )
         logger.info(
             "screening_saved user_id=%s instrument=%s severity=%s risk_level=%s",

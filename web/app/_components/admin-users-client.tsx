@@ -82,6 +82,7 @@ export function AdminUsersClient() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [exportingId, setExportingId] = useState<string | null>(null)
+  const [clearingHistoryId, setClearingHistoryId] = useState<string | null>(null)
   const [disablingId, setDisablingId] = useState<string | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -169,6 +170,47 @@ export function AdminUsersClient() {
     }
   }
 
+  async function clearConversationHistory(user: AdminUser) {
+    if (clearingHistoryId) return
+    const confirmed = window.confirm(
+      `确定清除 ${user.username || user.user_id} 的全部对话历史吗？\n\n` +
+      '会永久删除会话、消息、摘要、长期记忆、画像、照护计划、任务和交接文档；账号与独立量表记录将保留。此操作无法撤销。'
+    )
+    if (!confirmed) return
+
+    setError('')
+    setNotice('')
+    setClearingHistoryId(user.user_id)
+    try {
+      const res = await fetch(
+        `/api/admin/users/${encodeURIComponent(user.user_id)}/conversation-history`,
+        { method: 'DELETE' }
+      )
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || '清除对话历史失败，请稍后再试。')
+        return
+      }
+
+      const deleted = data.deleted && typeof data.deleted === 'object' ? data.deleted : {}
+      const sessions = typeof deleted.sessions === 'number' ? deleted.sessions : 0
+      const messages = typeof deleted.session_messages === 'number' ? deleted.session_messages : 0
+      const contextItems = [
+        deleted.memories,
+        deleted.user_profiles,
+        deleted.care_plans,
+      ].reduce((total: number, value: unknown) => total + (typeof value === 'number' ? value : 0), 0)
+      setNotice(
+        `已清除 ${user.username || user.user_id} 的对话历史与聊天上下文：${sessions} 个会话、${messages} 条消息、${contextItems} 条长期上下文。`
+      )
+      await loadUsers(search)
+    } catch {
+      setError('网络连接不稳定，请稍后再试。')
+    } finally {
+      setClearingHistoryId(null)
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -208,7 +250,7 @@ export function AdminUsersClient() {
           <div>
             <h1 className="text-lg font-semibold text-zinc-900">用户管理</h1>
             <p className="mt-1 text-sm text-zinc-500">
-              支持导出完整 JSON 数据包，停用账号会撤销登录会话但保留用户数据。
+              支持导出完整 JSON 数据包、清除对话历史；停用账号会撤销登录会话但保留用户数据。
             </p>
           </div>
           <button
@@ -309,6 +351,14 @@ export function AdminUsersClient() {
                             className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
                           >
                             {exportingId === user.user_id ? '导出中...' : '导出 JSON'}
+                          </button>
+
+                          <button
+                            onClick={() => clearConversationHistory(user)}
+                            disabled={clearingHistoryId === user.user_id}
+                            className="rounded-lg border border-amber-300 px-3 py-2 text-sm text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                          >
+                            {clearingHistoryId === user.user_id ? '清除中...' : '清除对话历史'}
                           </button>
 
                           {canDisable && !confirming && (

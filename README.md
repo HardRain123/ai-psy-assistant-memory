@@ -2,7 +2,7 @@
 
 这是一个供 Dify HTTP Request 节点调用的心理支持/情绪陪伴/自助反思后端服务。当前 MVP 支持 50 分钟咨询 session 管理、长期记忆保存、咨询总结保存、上下文聚合、自动结束 session、后台任务扫描、咨询交接文档生成，以及 SQLite 本地开发和 PostgreSQL 线上部署。
 
-重要边界：本系统不是医疗诊断工具，不能替代专业心理咨询、精神科医生或紧急救援。上线公开使用前必须增加鉴权、访问控制、隐私授权和数据删除流程。
+重要边界：本系统不是医疗诊断工具，不能替代专业心理咨询、精神科医生或紧急救援。人工安全值守时间为工作日 09:00–18:00（中国时间），不是 7×24 小时危机服务。
 
 ## 功能清单
 
@@ -22,6 +22,9 @@
 - `GET /handoff/user/{user_id}`：查询某个用户的交接文档列表。
 - `GET /handoff/export/{document_id}`：导出 Markdown/JSON 内容。
 - `GET /handoff/export/user/{user_id}`：按用户导出用户级交接文档，整合长期画像、计划表、最近多次 session、长期记忆和风险记录。
+- 心理安全闭环：Dify/关键词/筛查原始证据、风险工单、企业微信告警、人工处置和敏感访问审计。
+- 用户权利：分项授权、自助导出、投诉、删除申请、7 天撤回、主库清除和备份删除清单。
+- 上线闸门：首批最多 50 名成人用户；告警、首响或删除任务失败时自动暂停邀请码。
 
 ## 本地启动
 
@@ -45,6 +48,10 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - `TASK_WORKER_ENABLED`：是否启动后台扫描线程，默认 `true`。
 - `TASK_SCAN_INTERVAL_SECONDS`：后台扫描间隔，默认 `60`。
 - `ENABLE_DEBUG_ENDPOINTS`：是否启用调试接口，默认 `false`。
+- `WECHAT_WORK_WEBHOOK_URL`：高风险企业微信告警机器人地址，生产环境必填。
+- `BACKUP_DELETION_WEBHOOK_URL`：基础设施执行备份删除清单的回调地址，生产环境必填。
+- `BETA_USER_LIMIT`：成人封闭测试人数上限，默认 `50`。
+- `SAFETY_COVERAGE_*`：人工安全值守时区和工作时段。
 
 本项目不在代码里写死数据库账号、密码或 API Key。
 
@@ -85,6 +92,15 @@ MVP 使用这些核心表：
 - `session_task`
 - `session_task_history`
 - `handoff_documents`
+- `safety_risk_evaluations`
+- `safety_incidents`
+- `safety_incident_events`
+- `user_consents`
+- `data_deletion_requests`
+- `complaints`
+- `sensitive_access_logs`
+- `compliance_audit_logs`
+- `launch_controls`
 
 `session_task` 用于当前待处理任务，`session_task_history` 用于记录每次执行历史。当前任务类型以 `auto_end_session` 为主，预留 `generate_session_summary`、`save_memory`、`generate_handoff_document` 的扩展空间。
 
@@ -231,7 +247,7 @@ python -m unittest tests.test_mvp
 ### Render / Railway
 
 1. 创建 PostgreSQL 数据库。
-2. 设置环境变量 `DATABASE_URL`、`APP_ENV=production`、`SESSION_LIMIT_MINUTES=50`。
+2. 设置环境变量 `DATABASE_URL`、`APP_ENV=production`、`AUTH_SECRET`、`BACKEND_SHARED_TOKEN`、`WECHAT_WORK_WEBHOOK_URL`、`BACKUP_DELETION_WEBHOOK_URL`。
 3. 构建命令：`pip install -r requirements.txt`。
 4. 启动命令：`uvicorn app.main:app --host 0.0.0.0 --port $PORT`。
 5. 首次启动会自动初始化数据库。
@@ -251,8 +267,14 @@ docker build -t ai-psy-assistant-memory .
 docker run --rm -p 8000:8000 \
   -e DATABASE_URL=postgresql://user:password@host:5432/dbname \
   -e APP_ENV=production \
+  -e AUTH_SECRET=replace-me \
+  -e BACKEND_SHARED_TOKEN=replace-me \
+  -e WECHAT_WORK_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=replace-me \
+  -e BACKUP_DELETION_WEBHOOK_URL=https://infra.example.com/delete-backups \
   ai-psy-assistant-memory
 ```
+
+完整上线步骤见 [docs/launch-safety-checklist.md](docs/launch-safety-checklist.md)。
 
 ## 日志和异常
 
@@ -260,27 +282,33 @@ docker run --rm -p 8000:8000 \
 
 ## 隐私和安全
 
-- 高危关键词包括：`不想活了`、`想死`、`自杀`、`活着没意义`、`伤害自己`、`伤害别人`。
-- 检测到高危表达时会标记 `risk_level=high`，并在交接文档风险评估中提示人工复核。
+- 风险等级固定为 `none / low / medium / high`；`immediate_action_required` 是独立布尔字段，不是新的风险等级。
+- Dify、后端规则和量表结果分别保留原始证据，再生成最终风险等级，避免覆盖来源记录。
+- `medium` 进入人工复核队列；`high` 进入企业微信告警队列；迫近危险会立即向用户展示 110、120 和现场安全指引。
+- 完整会话仅允许授权安全运营人员在填写理由后查看，并记录敏感数据访问审计。
 - 交接文档是结构化摘要，不是完整聊天记录复制。
-- 当前项目没有登录/鉴权系统，公开上线前必须增加鉴权。
-- 生产环境需要补充用户授权、数据查看、删除、导出和留存策略。
+- 用户通过邀请码注册并使用服务端会话鉴权；内部接口使用独立的 `BACKEND_SHARED_TOKEN`。
+- 注册要求年满 18 岁，并分别取得 AI 服务、心理健康敏感信息、对话保存、长期记忆和人工安全复核授权。
+- 用户可以自助导出、投诉、申请删除、查询删除状态和在 7 天宽限期内撤回；备份删除最迟 30 天完成。
+- 首版不收集手机号和紧急联系人。
 
 ## 上线前检查清单
 
 - PostgreSQL 可连接，`/health` 返回 `database.ok=true`。
 - `DATABASE_URL` 不含硬编码真实密码。
+- `APP_ENV=production`，且鉴权、企业微信和备份删除所需环境变量全部配置。
 - Dify HTTP Request 节点字段映射已验证。
-- 公开环境已加鉴权。
-- 高危内容处理和人工兜底流程已确认。
+- Dify 风险枚举仍为 `none / low / medium / high`，没有增加 `urgent`。
+- 企业微信告警、人工值守、非值守时段提示和升级处置均已完成演练。
+- 删除、撤回、主库清除、备份删除回调和删除失败闸门均已完成演练。
+- 首批成人用户上限保持为 50 人。
 - 日志不包含完整咨询原文。
-- 备份、迁移和数据删除策略已确认。
-- 运行 `python -m unittest tests.test_mvp` 通过。
+- 运行 `python -m pytest -q`、`npm run lint` 和 `npm run build` 通过。
 
 ## 已知限制
 
 - 交接文档的总结目前基于已保存 summary/messages 生成规则化草稿，不调用外部 LLM 做深度临床总结。
 - 当前只支持 Markdown 和 JSON 导出。
-- 后台任务是 FastAPI 进程内线程，未来多实例生产环境建议迁移到 Celery/APScheduler/独立 worker。
-- 数据库初始化采用轻量 `init_db()`，复杂版本迁移建议后续引入 Alembic。
-- 当前无登录鉴权，不适合直接公开给不受控用户访问。
+- 后台任务是 FastAPI 进程内线程；多实例生产环境需要确保只有一个任务 worker，后续建议迁移到独立任务队列。
+- 数据库初始化采用轻量 `init_db()` 和兼容迁移；正式多版本发布建议引入 Alembic。
+- 企业微信告警和备份删除依赖外部 webhook，生产配置缺失时应用会拒绝以 `APP_ENV=production` 启动。

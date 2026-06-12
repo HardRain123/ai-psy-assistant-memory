@@ -106,6 +106,21 @@ class MvpApiTests(unittest.TestCase):
         self.assertEqual(data["status"], "ok")
         self.assertTrue(data["database"]["ok"])
 
+    def test_health_returns_503_when_database_is_unavailable(self):
+        with patch(
+            "app.routers.health.check_db_health",
+            return_value={
+                "ok": False,
+                "backend": "postgresql",
+                "error": "db_health_failed",
+                "message": "database unavailable",
+            },
+        ):
+            response = client.get("/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["status"], "degraded")
+
     def test_sensitive_api_requires_backend_token(self):
         raw_client = TestClient(app)
         missing = raw_client.get("/context/protected-user")
@@ -1233,6 +1248,20 @@ class MvpApiTests(unittest.TestCase):
         ]:
             self.assertIn(marker, dsl_text)
         self.assertNotIn("sk-", dsl_text.lower())
+
+    def test_dify_dsl_does_not_embed_backend_token(self):
+        dsl_path = latest_dsl_path()
+        dsl = yaml.safe_load(dsl_path.read_text(encoding="utf-8"))
+        backend_token = next(
+            (
+                item
+                for item in dsl["workflow"].get("environment_variables", [])
+                if item.get("name") == "BACKEND_SHARED_TOKEN"
+            ),
+            None,
+        )
+        self.assertIsNotNone(backend_token)
+        self.assertFalse((backend_token.get("value") or "").strip())
 
     def test_dify_end_intent_parse_keeps_fatigue_only_open(self):
         dsl_path = latest_dsl_path()

@@ -34,6 +34,14 @@ function registerErrorMessage(status: number, detail: unknown) {
     return '邀请码已被使用或已失效，请联系管理员重新生成。'
   }
 
+  if (message === 'required_consents_missing') {
+    return '请逐项确认年龄要求和全部必要授权。'
+  }
+
+  if (message === 'policy_version_outdated') {
+    return '授权条款已经更新，请刷新页面后重新确认。'
+  }
+
   if (status === 400) {
     return '注册信息不完整，请检查邀请码、账号、邮箱和密码。'
   }
@@ -47,8 +55,14 @@ function registerErrorMessage(status: number, detail: unknown) {
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
-  if (!body.inviteCode || !body.username || !body.email || !body.password) {
-    return Response.json({ error: '请填写邀请码、账号、邮箱和密码。' }, { status: 400 })
+  if (
+    !body.inviteCode ||
+    !body.username ||
+    !body.email ||
+    !body.password ||
+    !body.policyVersion
+  ) {
+    return Response.json({ error: '请填写注册信息并逐项完成授权确认。' }, { status: 400 })
   }
 
   const result = await backendRequest('/internal/auth/register', {
@@ -58,6 +72,13 @@ export async function POST(req: Request) {
       email: body.email,
       password: body.password,
       inviteCode: body.inviteCode,
+      policyVersion: body.policyVersion,
+      adultConfirmed: body.adultConfirmed === true,
+      aiServiceConsent: body.aiServiceConsent === true,
+      sensitiveDataConsent: body.sensitiveDataConsent === true,
+      conversationStorageConsent: body.conversationStorageConsent === true,
+      longTermMemoryConsent: body.longTermMemoryConsent === true,
+      humanSafetyReviewConsent: body.humanSafetyReviewConsent === true,
     }),
   })
 

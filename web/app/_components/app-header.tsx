@@ -62,6 +62,12 @@ export function AppHeader({ user }: { user: User }) {
               >
                 邀请码
               </Link>
+              <Link
+                href="/admin/safety"
+                className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100"
+              >
+                安全运营
+              </Link>
             </>
           )}
           <button

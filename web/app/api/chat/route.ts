@@ -1,13 +1,20 @@
 import { backendRequest, clearSessionCookie, getCurrentUser } from '../_lib/auth'
+import { safetyFallbackStream } from './safety-fallback'
 
 type MessageSyncStatus = 'streaming' | 'complete' | 'error'
 
-async function getCurrentSessionId(userId: string, sessionToken: string) {
+async function getCurrentSession(userId: string, sessionToken: string) {
   const result = await backendRequest(`/session/status/${encodeURIComponent(userId)}`, {
     method: 'GET',
     sessionToken,
   })
-  return result.ok && typeof result.data?.session_id === 'string' ? result.data.session_id : ''
+  return {
+    sessionId: result.ok && typeof result.data?.session_id === 'string' ? result.data.session_id : '',
+    conversationId:
+      result.ok && typeof result.data?.dify_conversation_id === 'string'
+        ? result.data.dify_conversation_id
+        : '',
+  }
 }
 
 async function saveSessionMessage({
@@ -59,7 +66,7 @@ function createTurnId() {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { message, conversationId } = body
+    const { message } = body
     const allowedKeys = new Set(['message', 'conversationId'])
     const unexpectedKeys = Object.keys(body).filter((key) => !allowedKeys.has(key))
 
@@ -87,7 +94,21 @@ export async function POST(req: Request) {
     }
 
     const userId = current.user.user_id
-    const sessionId = await getCurrentSessionId(userId, current.sessionToken)
+    if (!current.user.is_admin) {
+      const consentStatus = await backendRequest('/internal/account/consents', {
+        method: 'GET',
+        sessionToken: current.sessionToken,
+      })
+      if (!consentStatus.ok || !consentStatus.data?.complete) {
+        return Response.json(
+          { error: '请先完成年龄确认与分项授权。', action: 'consent_required' },
+          { status: 403 }
+        )
+      }
+    }
+    const currentSession = await getCurrentSession(userId, current.sessionToken)
+    const sessionId = currentSession.sessionId
+    const conversationId = currentSession.conversationId
     const turnId = createTurnId()
     const userMessageSave = await saveSessionMessage({
       userId,
@@ -100,6 +121,10 @@ export async function POST(req: Request) {
       difyConversationId: typeof conversationId === 'string' ? conversationId : undefined,
     })
     const metadataSupported = Boolean(userMessageSave?.ok && userMessageSave.data?.turn_id === turnId)
+    const safetyGuidance =
+      userMessageSave?.ok && userMessageSave.data?.safety_guidance
+        ? userMessageSave.data.safety_guidance
+        : null
 
     const contextResult = await backendRequest(`/context/${encodeURIComponent(userId)}`, {
       method: 'GET',
@@ -117,33 +142,65 @@ export async function POST(req: Request) {
     const difyApiKey = process.env.DIFY_API_KEY
 
     if (!difyApiUrl || !difyApiKey) {
+      if (safetyGuidance) {
+        return safetyFallbackStream({
+          safetyGuidance,
+          riskLevel: userMessageSave?.data?.risk_level || 'none',
+          immediateActionRequired: Boolean(userMessageSave?.data?.immediate_action_required),
+          error: '聊天服务暂时不可用，请优先按上方安全指引行动。',
+        })
+      }
       return Response.json(
         { error: '聊天服务暂时不可用，请稍后再试。' },
         { status: 503 }
       )
     }
 
-    const res = await fetch(`${difyApiUrl}/chat-messages`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${difyApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: message.trim(),
-        user: userId,
-        conversation_id: typeof conversationId === 'string' ? conversationId : '',
-        response_mode: 'streaming',
-        inputs: {
-          user_id: userId,
-          context: contextText,
-          context_text: contextText,
-          recent_screening: recentScreening,
+    let res: Response
+    try {
+      res = await fetch(`${difyApiUrl}/chat-messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${difyApiKey}`,
+          'Content-Type': 'application/json',
         },
-      }),
-    })
+        body: JSON.stringify({
+          query: message.trim(),
+          user: userId,
+          conversation_id: typeof conversationId === 'string' ? conversationId : '',
+          response_mode: 'streaming',
+          inputs: {
+            user_id: userId,
+            context: contextText,
+            context_text: contextText,
+            recent_screening: recentScreening,
+          },
+        }),
+      })
+    } catch {
+      if (safetyGuidance) {
+        return safetyFallbackStream({
+          safetyGuidance,
+          riskLevel: userMessageSave?.data?.risk_level || 'none',
+          immediateActionRequired: Boolean(userMessageSave?.data?.immediate_action_required),
+          error: '聊天服务连接失败，请优先按上方安全指引行动。',
+        })
+      }
+      return Response.json(
+        { error: '聊天服务暂时不可用，请稍后再试。' },
+        { status: 502 }
+      )
+    }
 
     if (!res.ok || !res.body) {
+      if (safetyGuidance) {
+        return safetyFallbackStream({
+          safetyGuidance,
+          riskLevel: userMessageSave?.data?.risk_level || 'none',
+          immediateActionRequired: Boolean(userMessageSave?.data?.immediate_action_required),
+          error: '聊天服务暂时不可用，请优先按上方安全指引行动。',
+        })
+      }
       return Response.json(
         { error: '聊天服务暂时不可用，请稍后再试。' },
         { status: 502 }
@@ -174,6 +231,15 @@ export async function POST(req: Request) {
           } catch {
             responseClosed = true
           }
+        }
+
+        if (safetyGuidance) {
+          emit({
+            type: 'safety',
+            immediateActionRequired: Boolean(userMessageSave?.data?.immediate_action_required),
+            riskLevel: userMessageSave?.data?.risk_level || 'none',
+            guidance: safetyGuidance,
+          })
         }
 
         async function persistAssistantSnapshot(syncStatus: MessageSyncStatus) {

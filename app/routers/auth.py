@@ -39,6 +39,11 @@ from app.services.auth import (
     reset_password_with_token,
     revoke_invite_code,
 )
+from app.services.compliance import (
+    consent_values_from_request,
+    record_user_consents,
+    validate_required_consents,
+)
 
 
 router = APIRouter(
@@ -63,6 +68,8 @@ def register(req: RegisterRequest, request: Request):
     email_message = None
     try:
         with transaction() as cur:
+            consent_values = consent_values_from_request(req)
+            validate_required_consents(req.policyVersion, consent_values)
             result = register_user(
                 cur,
                 req.username,
@@ -70,6 +77,15 @@ def register(req: RegisterRequest, request: Request):
                 req.password,
                 req.inviteCode,
                 request_ip_hash=_request_ip_hash(request),
+                user_agent=request.headers.get("user-agent", ""),
+            )
+            record_user_consents(
+                cur,
+                user_id=result["user"]["user_id"],
+                policy_version=req.policyVersion,
+                values=consent_values,
+                source="registration",
+                ip_hash=_request_ip_hash(request),
                 user_agent=request.headers.get("user-agent", ""),
             )
             email_message = result.pop("_email_message", None)

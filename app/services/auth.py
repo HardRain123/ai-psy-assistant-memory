@@ -471,6 +471,12 @@ def bootstrap_admin(cur):
 
 
 def create_invite_code(cur, created_by_user_id: str, note: str = "", expires_at: str | None = None) -> dict:
+    from app.services.launch_controls import assert_invite_issuance_allowed
+
+    try:
+        assert_invite_issuance_allowed(cur)
+    except ValueError as exc:
+        raise AuthError(str(exc), status_code=409) from exc
     raw_code = secrets.token_urlsafe(18)
     code_hash = hash_secret(raw_code, "invite")
     now = now_iso()
@@ -1336,3 +1342,91 @@ def require_admin_session(cur, session_token: str | None) -> dict:
     if not session["user"].get("is_admin"):
         raise AuthError("admin access required", status_code=403)
     return session
+
+
+def require_safety_operator_session(cur, session_token: str | None) -> dict:
+    session = require_session(cur, session_token)
+    if session["user"].get("is_admin"):
+        return session
+
+    cur.execute(
+        """
+        SELECT role
+        FROM user_roles
+        WHERE user_id = ? AND role IN ('safety_operator', 'safety_lead')
+        LIMIT 1
+        """,
+        (session["user"]["user_id"],),
+    )
+    if not cur.fetchone():
+        raise AuthError("admin access required", status_code=403)
+    return session
+
+
+def list_safety_operators(cur) -> list[dict]:
+    cur.execute(
+        """
+        SELECT r.user_id, u.username, r.role, r.created_by_user_id, r.created_at
+        FROM user_roles r
+        JOIN users u ON u.user_id = r.user_id
+        WHERE r.role IN ('safety_operator', 'safety_lead')
+        ORDER BY r.role DESC, r.created_at ASC
+        """
+    )
+    return [
+        {
+            "user_id": row[0],
+            "username": row[1] or row[0],
+            "role": row[2],
+            "created_by_user_id": row[3],
+            "created_at": row[4],
+        }
+        for row in cur.fetchall()
+    ]
+
+
+def set_safety_operator_role(
+    cur,
+    *,
+    user_id: str,
+    role: str,
+    enabled: bool,
+    actor_user_id: str,
+) -> dict:
+    if role not in {"safety_operator", "safety_lead"}:
+        raise AuthError("invalid_safety_role", status_code=400)
+    cur.execute(
+        """
+        SELECT user_id, disabled_at
+        FROM users
+        WHERE user_id = ?
+        LIMIT 1
+        """,
+        (user_id,),
+    )
+    user = cur.fetchone()
+    if not user:
+        raise AuthError("user_not_found", status_code=404)
+    if user[1]:
+        raise AuthError("user_disabled", status_code=400)
+    if enabled:
+        cur.execute(
+            """
+            INSERT INTO user_roles (user_id, role, created_by_user_id, created_at)
+            SELECT ?, ?, ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1 FROM user_roles WHERE user_id = ? AND role = ?
+            )
+            """,
+            (user_id, role, actor_user_id, now_iso(), user_id, role),
+        )
+    else:
+        cur.execute(
+            "DELETE FROM user_roles WHERE user_id = ? AND role = ?",
+            (user_id, role),
+        )
+    return {
+        "user_id": user_id,
+        "role": role,
+        "enabled": enabled,
+    }

@@ -8,6 +8,7 @@ from app.utils import now_iso
 
 AUDIT_ACTION_EXPORT_USER = "admin_user_export"
 AUDIT_ACTION_DISABLE_USER = "admin_user_disable"
+AUDIT_ACTION_CLEAR_USER_CONVERSATION_HISTORY = "admin_user_conversation_history_clear"
 SENSITIVE_ENV_NAMES = (
     "BACKEND_SHARED_TOKEN",
     "DIFY_API_KEY",
@@ -442,6 +443,35 @@ def export_user_data(cur, user_id: str) -> dict:
         ],
     }
     return _redact_sensitive_values(payload)
+
+
+def clear_user_conversation_history(cur, target_user_id: str) -> dict:
+    user = _get_public_user(cur, target_user_id)
+    tables = (
+        "session_messages",
+        "session_summaries",
+        "memories",
+        "user_profiles",
+        "care_plans",
+        "handoff_documents",
+        "session_task_history",
+        "session_task",
+        "sessions",
+    )
+    deleted = {}
+    for table in tables:
+        cur.execute(f"DELETE FROM {table} WHERE user_id = ?", (target_user_id,))
+        deleted[table] = max(cur.rowcount, 0)
+
+    return {
+        "success": True,
+        "user": {
+            "user_id": user["user_id"],
+            "username": user["username"],
+        },
+        "deleted": deleted,
+        "total_deleted": sum(deleted.values()),
+    }
 
 
 def disable_user_account(cur, target_user_id: str, actor_user_id: str) -> dict:

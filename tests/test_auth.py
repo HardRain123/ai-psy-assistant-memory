@@ -30,6 +30,7 @@ from app import db as db_module
 from app.db import transaction
 from app.main import app
 from app.services.auth import create_auth_session, hash_password
+from app.services.session_tasks import complete_task
 
 
 client = TestClient(app)
@@ -42,6 +43,18 @@ def unique_name(prefix: str) -> str:
 
 def unique_email(prefix: str) -> str:
     return f"{unique_name(prefix)}@example.com"
+
+
+def required_consents() -> dict:
+    return {
+        "policyVersion": "2026-06-12.1",
+        "adultConfirmed": True,
+        "aiServiceConsent": True,
+        "sensitiveDataConsent": True,
+        "conversationStorageConsent": True,
+        "longTermMemoryConsent": True,
+        "humanSafetyReviewConsent": True,
+    }
 
 
 def login_admin() -> str:
@@ -70,7 +83,13 @@ def create_regular_user(admin_token: str, note: str = "user"):
     password = "user-password-123"
     registered = client.post(
         "/internal/auth/register",
-        json={"username": username, "email": email, "password": password, "inviteCode": invite_code},
+        json={
+            "username": username,
+            "email": email,
+            "password": password,
+            "inviteCode": invite_code,
+            **required_consents(),
+        },
     )
     assert registered.status_code == 200, registered.text
     logged_in = client.post(
@@ -205,6 +224,7 @@ class AuthApiTests(unittest.TestCase):
         registered = client.post(
             "/internal/auth/register",
             json={
+                **required_consents(),
                 "username": username,
                 "email": unique_email("flow"),
                 "password": password,
@@ -217,6 +237,7 @@ class AuthApiTests(unittest.TestCase):
         reused = client.post(
             "/internal/auth/register",
             json={
+                **required_consents(),
                 "username": unique_name("user"),
                 "email": unique_email("flow-reused"),
                 "password": password,
@@ -254,6 +275,7 @@ class AuthApiTests(unittest.TestCase):
             registered = client.post(
                 "/internal/auth/register",
                 json={
+                    **required_consents(),
                     "username": username,
                     "email": email,
                     "password": "user-password-123",
@@ -306,6 +328,7 @@ class AuthApiTests(unittest.TestCase):
         duplicate = client.post(
             "/internal/auth/register",
             json={
+                **required_consents(),
                 "username": unique_name("email"),
                 "email": normalized_email.upper(),
                 "password": "user-password-123",
@@ -409,6 +432,7 @@ class AuthApiTests(unittest.TestCase):
         registered = client.post(
             "/internal/auth/register",
             json={
+                **required_consents(),
                 "username": unique_name("user"),
                 "email": unique_email("revoke"),
                 "password": "user-password-123",
@@ -428,6 +452,7 @@ class AuthApiTests(unittest.TestCase):
             registered = client.post(
                 "/internal/auth/register",
                 json={
+                    **required_consents(),
                     "username": username,
                     "email": email,
                     "password": password,
@@ -500,6 +525,7 @@ class AuthApiTests(unittest.TestCase):
         client.post(
             "/internal/auth/register",
             json={
+                **required_consents(),
                 "username": username,
                 "email": unique_email("hash"),
                 "password": password,
@@ -805,6 +831,7 @@ class AuthApiTests(unittest.TestCase):
         client.post(
             "/internal/auth/register",
             json={
+                **required_consents(),
                 "username": username,
                 "email": unique_email("regular"),
                 "password": password,
@@ -849,6 +876,13 @@ class AuthApiTests(unittest.TestCase):
         )
         self.assertEqual(disable_response.status_code, 403)
         self.assertEqual(disable_response.json()["error"], "admin_required")
+
+        clear_response = client.delete(
+            f"/internal/admin/users/{regular['user_id']}/conversation-history",
+            headers={"X-Auth-Session": regular["session_token"]},
+        )
+        self.assertEqual(clear_response.status_code, 403)
+        self.assertEqual(clear_response.json()["error"], "admin_required")
 
     def test_admin_can_reset_only_own_latest_session_to_yesterday(self):
         admin_token = login_admin()
@@ -1061,6 +1095,187 @@ class AuthApiTests(unittest.TestCase):
             json={"username": regular["username"], "password": regular["password"]},
         )
         self.assertEqual(relogin.status_code, 401)
+
+    def test_admin_can_clear_user_conversation_history_and_derived_context(self):
+        admin_token = login_admin()
+        admin_user_id = client.get(
+            "/internal/auth/me",
+            headers={"X-Auth-Session": admin_token},
+        ).json()["user"]["user_id"]
+        regular = create_regular_user(admin_token, note="clear-history")
+        user_id = regular["user_id"]
+        session = client.get(f"/session/status/{user_id}").json()
+        session_id = session["session_id"]
+
+        client.post(
+            "/session-message",
+            json={"user_id": user_id, "session_id": session_id, "role": "user", "content": "需要清除的消息"},
+        )
+        client.post(
+            "/session-summary",
+            json={"user_id": user_id, "session_id": session_id, "summary": "需要清除的摘要"},
+        )
+        client.post(
+            "/profile",
+            json={"user_id": user_id, "profile_memory": "需要保留的用户画像"},
+        )
+        client.post(
+            "/care-plan",
+            json={"user_id": user_id, "plan_text": "需要保留的照护计划"},
+        )
+
+        now = datetime.now().isoformat()
+        task_id = f"task-{uuid.uuid4().hex}"
+        with transaction() as cur:
+            cur.execute(
+                """
+                INSERT INTO memories (
+                    user_id, session_id, content, memory_type, importance,
+                    source_type, evidence, confidence, is_hypothesis, should_persist,
+                    created_at, updated_at
+                )
+                VALUES (?, ?, '需要保留的长期记忆', 'general', 3,
+                        'manual', '', 'high', 0, 1, ?, ?)
+                """,
+                (user_id, session_id, now, now),
+            )
+            cur.execute(
+                """
+                INSERT INTO session_task (
+                    task_id, session_id, user_id, task_type, status,
+                    created_at, updated_at
+                )
+                VALUES (?, ?, ?, 'finalize', 'completed', ?, ?)
+                """,
+                (task_id, session_id, user_id, now, now),
+            )
+            cur.execute(
+                """
+                INSERT INTO session_task_history (
+                    task_id, session_id, user_id, task_type, status, created_at
+                )
+                VALUES (?, ?, ?, 'finalize', 'completed', ?)
+                """,
+                (task_id, session_id, user_id, now),
+            )
+            cur.execute(
+                """
+                INSERT INTO handoff_documents (
+                    document_id, user_id, session_id, title, format, content,
+                    generated_by, created_at, updated_at
+                )
+                VALUES (?, ?, ?, '待清除交接文档', 'markdown', '待清除内容', 'system', ?, ?)
+                """,
+                (f"doc-{uuid.uuid4().hex}", user_id, session_id, now, now),
+            )
+            cur.execute(
+                """
+                INSERT INTO clinical_screenings (
+                    user_id, session_id, instrument, score, severity, label,
+                    answers_json, created_at
+                )
+                VALUES (?, ?, 'phq9', 2, 'minimal', '轻微', '[]', ?)
+                """,
+                (user_id, session_id, now),
+            )
+
+        response = client.delete(
+            f"/internal/admin/users/{user_id}/conversation-history",
+            headers={"X-Auth-Session": admin_token},
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["user"]["user_id"], user_id)
+        self.assertGreaterEqual(payload["deleted"]["sessions"], 1)
+        self.assertGreaterEqual(payload["deleted"]["session_messages"], 1)
+        self.assertGreaterEqual(payload["deleted"]["session_summaries"], 1)
+        self.assertGreaterEqual(payload["deleted"]["session_task"], 1)
+        self.assertGreaterEqual(payload["deleted"]["session_task_history"], 1)
+        self.assertGreaterEqual(payload["deleted"]["handoff_documents"], 1)
+        self.assertGreaterEqual(payload["deleted"]["memories"], 1)
+        self.assertEqual(payload["deleted"]["user_profiles"], 1)
+        self.assertEqual(payload["deleted"]["care_plans"], 1)
+
+        with transaction() as cur:
+            completed_after_clear = complete_task(
+                cur,
+                {
+                    "task_id": task_id,
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "task_type": "finalize",
+                },
+                "late worker completion",
+            )
+        self.assertFalse(completed_after_clear)
+
+        with transaction() as cur:
+            cleared_counts = {}
+            for table in [
+                "sessions",
+                "session_messages",
+                "session_summaries",
+                "session_task",
+                "session_task_history",
+                "handoff_documents",
+            ]:
+                cur.execute(f"SELECT COUNT(*) FROM {table} WHERE user_id = ?", (user_id,))
+                cleared_counts[table] = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM memories WHERE user_id = ?", (user_id,))
+            memory_count = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM user_profiles WHERE user_id = ?", (user_id,))
+            profile_count = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM care_plans WHERE user_id = ?", (user_id,))
+            care_plan_count = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) FROM clinical_screenings WHERE user_id = ?", (user_id,))
+            screening_count = cur.fetchone()[0]
+
+        self.assertTrue(all(count == 0 for count in cleared_counts.values()))
+        self.assertEqual(memory_count, 0)
+        self.assertEqual(profile_count, 0)
+        self.assertEqual(care_plan_count, 0)
+        self.assertEqual(screening_count, 1)
+
+        still_authenticated = client.get(
+            "/internal/auth/me",
+            headers={"X-Auth-Session": regular["session_token"]},
+        )
+        self.assertEqual(still_authenticated.status_code, 200)
+        self.assertTrue(still_authenticated.json()["authenticated"])
+
+        listed = client.get("/internal/admin/users", headers={"X-Auth-Session": admin_token})
+        listed_user = next(item for item in listed.json()["users"] if item["user_id"] == user_id)
+        self.assertEqual(listed_user["counts"]["sessions"], 0)
+        self.assertEqual(listed_user["counts"]["messages"], 0)
+        self.assertEqual(listed_user["counts"]["memories"], 0)
+
+        audit = latest_audit("admin_user_conversation_history_clear", user_id)
+        self.assertIsNotNone(audit)
+        self.assertTrue(audit["success"])
+        self.assertEqual(audit["actor_user_id"], admin_user_id)
+        self.assertEqual(audit["target_user_id"], user_id)
+
+        replacement_session = client.get(f"/session/status/{user_id}").json()
+        self.assertNotEqual(replacement_session["session_id"], session_id)
+        self.assertEqual(replacement_session["status"], "pending")
+
+    def test_admin_clear_conversation_history_returns_not_found_and_audits_failure(self):
+        admin_token = login_admin()
+        missing_user_id = f"missing-{uuid.uuid4().hex}"
+
+        response = client.delete(
+            f"/internal/admin/users/{missing_user_id}/conversation-history",
+            headers={"X-Auth-Session": admin_token},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["error"], "user_not_found")
+        audit = latest_audit("admin_user_conversation_history_clear", missing_user_id)
+        self.assertIsNotNone(audit)
+        self.assertFalse(audit["success"])
+        self.assertEqual(audit["error"], "user_not_found")
 
     def test_admin_audit_records_failures_and_audit_write_failure_is_hidden(self):
         admin_token = login_admin()

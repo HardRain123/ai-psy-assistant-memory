@@ -269,11 +269,6 @@ export function AssessmentClient({ initialData = null }: { initialData?: Bootstr
     }
   }, [initialData, router])
 
-  const activeInstrument = useMemo(
-    () => instruments.find((instrument) => instrument.code === activeCode) || null,
-    [activeCode, instruments]
-  )
-
   const coreScores = useMemo(() => {
     return Object.fromEntries(
       instruments.map((instrument) => [instrument.code, scoreInstrument(instrument, answers[instrument.code])])
@@ -302,20 +297,25 @@ export function AssessmentClient({ initialData = null }: { initialData?: Bootstr
     })
   }, [coreComplete, coreScores, phqSelfHarmPositive, supplementalModules])
 
-  const activeSupplementalModule = useMemo(
-    () => visibleSupplementalModules.find((module) => module.code === activeCode) || null,
-    [activeCode, visibleSupplementalModules]
+  const visibleCodes = useMemo(
+    () =>
+      new Set([
+        ...instruments.map((instrument) => instrument.code),
+        ...visibleSupplementalModules.map((module) => module.code),
+      ]),
+    [instruments, visibleSupplementalModules]
   )
-
-  useEffect(() => {
-    const visibleCodes = new Set([
-      ...instruments.map((instrument) => instrument.code),
-      ...visibleSupplementalModules.map((module) => module.code),
-    ])
-    if (visibleCodes.size > 0 && !visibleCodes.has(activeCode)) {
-      setActiveCode(instruments[0]?.code || visibleSupplementalModules[0]?.code || 'phq9')
-    }
-  }, [activeCode, instruments, visibleSupplementalModules])
+  const effectiveActiveCode = visibleCodes.has(activeCode)
+    ? activeCode
+    : instruments[0]?.code || visibleSupplementalModules[0]?.code || 'phq9'
+  const activeInstrument = useMemo(
+    () => instruments.find((instrument) => instrument.code === effectiveActiveCode) || null,
+    [effectiveActiveCode, instruments]
+  )
+  const activeSupplementalModule = useMemo(
+    () => visibleSupplementalModules.find((module) => module.code === effectiveActiveCode) || null,
+    [effectiveActiveCode, visibleSupplementalModules]
+  )
 
   const supplementalCompletion = useMemo(() => {
     const total = visibleSupplementalModules.reduce((sum, module) => sum + module.questions.length, 0)
@@ -441,7 +441,7 @@ export function AssessmentClient({ initialData = null }: { initialData?: Bootstr
         <nav className="rounded-lg border border-zinc-200 bg-white p-2">
           {instruments.map((instrument) => {
             const answered = (answers[instrument.code] || []).filter((value) => value !== null).length
-            const active = instrument.code === activeCode
+            const active = instrument.code === effectiveActiveCode
             return (
               <button
                 key={instrument.code}
@@ -465,7 +465,7 @@ export function AssessmentClient({ initialData = null }: { initialData?: Bootstr
             <div className="mt-2 border-t border-zinc-100 pt-2">
               {visibleSupplementalModules.map((module) => {
                 const answered = (supplementAnswers[module.code] || []).filter((value) => value !== null).length
-                const active = module.code === activeCode
+                const active = module.code === effectiveActiveCode
                 return (
                   <button
                     key={module.code}
@@ -668,6 +668,20 @@ export function AssessmentClient({ initialData = null }: { initialData?: Bootstr
                 {stageCopy(snapshot?.stage)}
               </span>
             </div>
+
+            {(snapshot?.safety?.flags || []).includes('current_safety_urgent') && (
+              <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4 text-sm leading-6 text-red-950">
+                <h3 className="font-semibold">请先保证眼前安全</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  <li>如果危险正在发生，请立即拨打 110 或 120。</li>
+                  <li>远离刀具、药物、绳索、高处或其他可能造成伤害的物品和地点。</li>
+                  <li>不要独处，立即联系一位可信任的人陪在你身边。</li>
+                </ul>
+                <p className="mt-2 font-medium">
+                  人工安全值守时间为工作日 09:00–18:00（中国时间）；其他时段无人实时查看。
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-lg border border-zinc-200 p-4">

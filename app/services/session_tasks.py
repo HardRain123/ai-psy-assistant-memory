@@ -176,6 +176,9 @@ def complete_task(cur, task: dict, result: str):
         """,
         (now, now, task["task_id"]),
     )
+    if cur.rowcount != 1:
+        return False
+
     insert_session_task_history(
         cur,
         task["task_id"],
@@ -185,6 +188,7 @@ def complete_task(cur, task: dict, result: str):
         "success",
         result,
     )
+    return True
 
 
 def run_task(task: dict):
@@ -285,6 +289,13 @@ def mark_task_failed(task: dict, error: Exception):
 
 
 def run_session_task_once(scan_limit: int = 20, fetch_limit: int = 5):
+    from app.services.compliance import (
+        process_due_account_deletions,
+        process_pending_backup_deletions,
+    )
+    from app.services.launch_controls import evaluate_launch_gates
+    from app.services.safety import process_pending_safety_alerts
+
     scan_result = scan_expired_sessions_and_create_tasks(limit=scan_limit)
     tasks = fetch_pending_tasks(limit=fetch_limit)
     results = []
@@ -312,7 +323,22 @@ def run_session_task_once(scan_limit: int = 20, fetch_limit: int = 5):
                 }
             )
 
-    return {"scan": scan_result, "claimed_tasks": len(tasks), "results": results}
+    alert_result = process_pending_safety_alerts(limit=20)
+    deletion_result = process_due_account_deletions(limit=10)
+    backup_deletion_result = process_pending_backup_deletions(limit=10)
+    from app.db import transaction
+
+    with transaction() as cur:
+        launch_status = evaluate_launch_gates(cur)
+    return {
+        "scan": scan_result,
+        "claimed_tasks": len(tasks),
+        "results": results,
+        "safety_alerts": alert_result,
+        "account_deletions": deletion_result,
+        "backup_deletions": backup_deletion_result,
+        "launch_status": launch_status,
+    }
 
 
 def task_worker_loop():
