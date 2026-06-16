@@ -326,6 +326,15 @@ def test_screening_urgent_flag_sets_immediate_boolean():
     assert "current_safety_urgent" in payload["snapshot"]["safety"]["flags"]
     assert payload["immediate_action_required"] is True
     assert payload["snapshot"]["safety"]["risk_level"] != "urgent"
+    with transaction() as cur:
+        incident = get_safety_incident(cur, payload["safety_incident_id"])
+    evidence = incident["source_evidence"]["screening"][0]
+    assert "PHQ-9 第 9 题阳性" in evidence["trigger_summary"][0]
+    assert evidence["screening_summaries"][0]["title"] == "PHQ-9 抑郁症状筛查"
+    assert evidence["screening_summaries"][0]["score"] == 1
+    assert evidence["safety_domain"]["current_thought"] == "强烈或难以摆脱"
+    assert evidence["safety_domain"]["plan"] == "已有具体方式"
+    assert "answers" not in str(evidence)
 
 
 def test_off_hours_high_risk_notice_does_not_promise_realtime_staff():
@@ -409,6 +418,98 @@ def test_wechat_alert_failure_retries_and_remains_visible():
     assert row[1] == 2
     assert row[2] == "RuntimeError"
     assert event_count == 2
+
+
+def test_admin_can_requeue_failed_safety_alert():
+    admin_login = client.post(
+        "/internal/auth/login",
+        json={"username": "admin", "password": "admin-password"},
+    )
+    admin_token = admin_login.json()["session_token"]
+    with patch("app.services.safety.is_within_safety_coverage", return_value=True):
+        with transaction() as cur:
+            incident = create_or_merge_safety_incident(
+                cur,
+                user_id=_unique("safety-alert-retry"),
+                session_id=_unique("session"),
+                source="manual",
+                source_risk_level="high",
+                final_risk_level="high",
+                risk_flags=["manual_test"],
+                reason="test alert retry",
+                source_evidence={"test": True},
+            )
+            cur.execute(
+                """
+                UPDATE safety_incidents
+                SET alert_status = 'failed',
+                    alert_attempt_count = 5,
+                    alert_last_error = 'RuntimeError'
+                WHERE incident_id = ?
+                """,
+                (incident["incident_id"],),
+            )
+
+    response = client.post(
+        f"/internal/admin/safety/incidents/{incident['incident_id']}/alert-retry",
+        headers={"X-Auth-Session": admin_token},
+        json={"note": "Webhook configured; retry requested."},
+    )
+    assert response.status_code == 200
+    retried = response.json()["incident"]
+    assert retried["alert_status"] == "pending"
+    assert retried["alert_attempt_count"] == 0
+    assert retried["alert_last_error"] is None
+
+    with transaction() as cur:
+        cur.execute(
+            """
+            SELECT COUNT(*)
+            FROM safety_incident_events
+            WHERE incident_id = ? AND event_type = 'alert_retry_queued'
+            """,
+            (incident["incident_id"],),
+        )
+        assert cur.fetchone()[0] == 1
+
+
+def test_resolved_alert_failure_does_not_pause_invites():
+    with patch("app.services.safety.is_within_safety_coverage", return_value=True):
+        with transaction() as cur:
+            incident = create_or_merge_safety_incident(
+                cur,
+                user_id=_unique("resolved-alert-gate"),
+                session_id=_unique("session"),
+                source="manual",
+                source_risk_level="high",
+                final_risk_level="high",
+                risk_flags=["manual_test"],
+                reason="resolved alert gate test",
+                source_evidence={"test": True},
+            )
+            now = datetime.now().isoformat()
+            cur.execute(
+                """
+                UPDATE safety_incidents
+                SET status = 'resolved',
+                    resolved_at = ?,
+                    first_response_at = ?,
+                    alert_status = 'failed',
+                    alert_attempt_count = 5
+                WHERE incident_id = ?
+                """,
+                (now, now, incident["incident_id"]),
+            )
+            set_invite_pause(
+                cur,
+                paused=False,
+                reason="test setup",
+                metadata={"test": True},
+            )
+
+    with transaction() as cur:
+        status = evaluate_launch_gates(cur)
+    assert status["paused"] is False
 
 
 def test_sensitive_transcript_access_and_actions_are_audited():

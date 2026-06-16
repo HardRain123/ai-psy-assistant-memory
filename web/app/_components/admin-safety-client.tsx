@@ -103,6 +103,7 @@ export function AdminSafetyClient() {
   const inviteBlocked = Boolean(
     overview.launch_status?.paused || overview.launch_status?.at_user_limit
   )
+  const launchReason = overview.launch_status?.reason
 
   return (
     <section className="mx-auto max-w-6xl space-y-4 px-4 py-5">
@@ -120,9 +121,9 @@ export function AdminSafetyClient() {
             成人用户 {overview.launch_status?.active_adult_users || 0}/{overview.launch_status?.beta_user_limit || 50}
           </span>
         </div>
-        {overview.launch_status?.reason && (
-          <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">
-            闸门原因：{overview.launch_status.reason}
+        {launchReason && (
+          <p className={`mt-3 rounded-lg p-3 text-sm ${inviteBlocked ? 'bg-red-50 text-red-800' : 'bg-zinc-50 text-zinc-700'}`}>
+            {inviteBlocked ? '闸门原因：' : '最近操作：'}{launchReason}
           </p>
         )}
         {overview.launch_status?.at_user_limit && (

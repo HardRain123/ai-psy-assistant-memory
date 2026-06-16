@@ -1,6 +1,11 @@
 import os
 from urllib.parse import urlparse
 
+from dotenv import load_dotenv
+
+
+load_dotenv(override=False)
+
 
 def _int_env(name: str, default: int) -> int:
     raw_value = os.getenv(name)

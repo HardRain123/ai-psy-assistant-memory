@@ -3,6 +3,25 @@
 import { useState } from 'react'
 
 type Message = { message_id: number; role: string; content: string; created_at: string }
+type ScreeningSummary = {
+  screening_id?: number | null
+  instrument?: string
+  title?: string
+  score?: number
+  severity?: string
+  label?: string
+  risk_level?: string
+  risk_flags?: string[]
+}
+type ScreeningEvidence = {
+  trigger_summary?: string[]
+  screening_summaries?: ScreeningSummary[]
+  stage?: string
+  current_danger?: string
+  safety_level?: string
+  risk_flags?: string[]
+  safety_domain?: Record<string, string | number | boolean | null | undefined>
+}
 type Incident = {
   incident_id: string
   user_id: string
@@ -14,7 +33,9 @@ type Incident = {
   immediate_action_required: boolean
   risk_flags: string[]
   reason: string
+  source_evidence?: Record<string, unknown>
   alert_status: string
+  alert_attempt_count?: number
   assigned_to_user_id?: string | null
   follow_up_at?: string | null
   message_context: Message[]
@@ -29,6 +50,53 @@ const ACTIONS = [
   ['resolve', '解决'],
   ['false_positive', '标记误报'],
 ] as const
+
+const STAGE_LABELS: Record<string, string> = {
+  stable: '稳定',
+  mild: '轻度关注',
+  moderate: '中度关注',
+  high_attention: '高关注',
+  urgent_attention: '紧急关注',
+}
+
+const SAFETY_FIELD_LABELS: Record<string, string> = {
+  supplement_completed: '安全补充模块',
+  current_thought: '当前/今日想法',
+  plan: '计划',
+  means: '工具/条件',
+  support: '支持与安全承诺',
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function latestEvidence(incident: Incident): ScreeningEvidence | null {
+  const evidence = incident.source_evidence
+  if (!isObject(evidence)) return null
+  if (Array.isArray(evidence.trigger_summary) || Array.isArray(evidence.screening_summaries)) {
+    return evidence as ScreeningEvidence
+  }
+
+  const sourceEvidence = evidence[incident.source] || evidence.screening
+  if (Array.isArray(sourceEvidence)) {
+    const latest = [...sourceEvidence].reverse().find(isObject)
+    return latest ? (latest as ScreeningEvidence) : null
+  }
+  return isObject(sourceEvidence) ? (sourceEvidence as ScreeningEvidence) : null
+}
+
+function labelCode(value?: string) {
+  if (!value) return ''
+  return STAGE_LABELS[value] || value
+}
+
+function displayValue(value: string | number | boolean | null | undefined) {
+  if (value === true) return '已完成'
+  if (value === false) return '未完成'
+  if (value === null || value === undefined || value === '') return '未记录'
+  return String(value)
+}
 
 export function AdminSafetyDetailClient({ initialIncident }: { initialIncident: Incident }) {
   const [incident, setIncident] = useState(initialIncident)
@@ -73,6 +141,10 @@ export function AdminSafetyDetailClient({ initialIncident }: { initialIncident: 
   }
 
   const visibleMessages = transcript || incident.message_context || []
+  const evidence = latestEvidence(incident)
+  const safetyRows = evidence?.safety_domain
+    ? Object.entries(evidence.safety_domain).filter(([, value]) => value !== null && value !== undefined && value !== '')
+    : []
 
   return (
     <section className="mx-auto grid max-w-6xl gap-4 px-4 py-5 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -90,6 +162,46 @@ export function AdminSafetyDetailClient({ initialIncident }: { initialIncident: 
             <div><dt className="text-zinc-500">立即处置</dt><dd>{incident.immediate_action_required ? '是' : '否'}</dd></div>
           </dl>
           <p className="mt-4 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">{incident.reason || '无补充原因'}</p>
+          {evidence && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <h2 className="font-semibold">触发说明</h2>
+              {(evidence.trigger_summary || []).length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {(evidence.trigger_summary || []).map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              )}
+              <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+                {evidence.stage && <div><dt className="text-amber-800">风险阶段</dt><dd>{labelCode(evidence.stage)}</dd></div>}
+                {evidence.current_danger && <div><dt className="text-amber-800">当前危险</dt><dd>{labelCode(evidence.current_danger)}</dd></div>}
+                {evidence.safety_level && <div><dt className="text-amber-800">安全等级</dt><dd>{evidence.safety_level}</dd></div>}
+              </dl>
+              {(evidence.screening_summaries || []).length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {(evidence.screening_summaries || []).map((item, index) => (
+                    <div key={`${item.instrument || 'screening'}-${item.screening_id || index}`} className="rounded bg-white/70 p-2">
+                      <p className="font-medium">{item.title || item.instrument || '状态评估'}</p>
+                      <p className="mt-1 text-amber-900">
+                        分数 {displayValue(item.score)}，等级 {displayValue(item.severity)}，风险 {displayValue(item.risk_level)}
+                      </p>
+                      {item.label && <p className="mt-1 text-amber-900">{item.label}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {safetyRows.length > 0 && (
+                <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {safetyRows.map(([key, value]) => (
+                    <div key={key}>
+                      <dt className="text-amber-800">{SAFETY_FIELD_LABELS[key] || key}</dt>
+                      <dd>{displayValue(value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             {(incident.risk_flags || []).map((flag) => <span key={flag} className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-700">{flag}</span>)}
           </div>
@@ -130,6 +242,15 @@ export function AdminSafetyDetailClient({ initialIncident }: { initialIncident: 
                 {loadingAction === action ? '处理中...' : label}
               </button>
             ))}
+            {incident.alert_status === 'failed' && (
+              <button
+                onClick={() => applyAction('retry_alert')}
+                disabled={Boolean(loadingAction)}
+                className="col-span-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 disabled:opacity-40"
+              >
+                {loadingAction === 'retry_alert' ? '正在重新排队...' : '重新发送企业微信告警'}
+              </button>
+            )}
           </div>
           {error && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         </div>

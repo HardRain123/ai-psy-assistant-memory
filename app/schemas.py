@@ -167,6 +167,10 @@ class SafetyIncidentActionRequest(BaseModel):
     follow_up_at: Optional[str] = None
 
 
+class SafetyAlertRetryRequest(BaseModel):
+    note: str = ""
+
+
 class SensitiveTranscriptAccessRequest(BaseModel):
     reason: str
 

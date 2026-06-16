@@ -128,6 +128,7 @@ def evaluate_launch_gates(cur) -> dict:
         SELECT incident_id
         FROM safety_incidents
         WHERE final_risk_level = 'high'
+          AND status IN ('open', 'acknowledged', 'assessing', 'contacted', 'escalated')
           AND alert_status = 'failed'
           AND alert_attempt_count >= ?
         ORDER BY updated_at DESC

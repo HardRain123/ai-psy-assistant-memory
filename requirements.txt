@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 pydantic
 psycopg[binary]
+python-dotenv
 httpx
 pytest
 PyYAML

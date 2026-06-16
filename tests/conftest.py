@@ -9,6 +9,7 @@ TEST_DB = Path(tempfile.gettempdir()) / "mvp-test.db"
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{TEST_DB}")
 os.environ.setdefault("TASK_WORKER_ENABLED", "false")
 os.environ.setdefault("ENABLE_DEBUG_ENDPOINTS", "false")
+os.environ["RUN_DIFY_E2E"] = "false"
 os.environ.setdefault("AUTH_SECRET", "test-auth-secret")
 os.environ.setdefault("BACKEND_SHARED_TOKEN", "test-backend-token")
 os.environ.setdefault("ADMIN_USERNAME", "admin")

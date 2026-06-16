@@ -6,6 +6,7 @@ from app.db import transaction
 from app.errors import auth_error_response, json_error
 from app.schemas import (
     LaunchControlUpdateRequest,
+    SafetyAlertRetryRequest,
     SafetyIncidentActionRequest,
     SafetyIncidentCreateRequest,
     SafetyOperatorRoleRequest,
@@ -28,6 +29,7 @@ from app.services.safety import (
     get_safety_incident,
     list_safety_incidents,
     record_sensitive_access,
+    retry_safety_alert,
     is_within_safety_coverage,
 )
 from app.services.launch_controls import get_launch_status, set_invite_pause
@@ -235,6 +237,33 @@ def admin_update_safety_incident(
     except Exception:
         logger.exception("safety_incident_action_failed incident_id=%s", incident_id)
         return json_error(500, "safety_incident_action_failed")
+
+
+@router.post("/admin/safety/incidents/{incident_id}/alert-retry")
+def admin_retry_safety_alert(
+    incident_id: str,
+    req: SafetyAlertRetryRequest,
+    x_auth_session: str | None = Header(default=None),
+):
+    try:
+        with transaction() as cur:
+            session = _operator(cur, x_auth_session)
+            incident = retry_safety_alert(
+                cur,
+                incident_id=incident_id,
+                actor_user_id=session["user"]["user_id"],
+                note=req.note,
+            )
+        return {"success": True, "incident": incident}
+    except AuthError as exc:
+        return auth_error_response(exc.status_code, exc.message)
+    except LookupError:
+        return json_error(404, "safety_incident_not_found")
+    except ValueError:
+        return json_error(409, "safety_alert_retry_not_allowed")
+    except Exception:
+        logger.exception("safety_alert_retry_failed incident_id=%s", incident_id)
+        return json_error(500, "safety_alert_retry_failed")
 
 
 @router.post("/admin/safety/incidents/{incident_id}/full-transcript-access")

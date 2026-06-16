@@ -22,12 +22,15 @@ export async function POST(req: Request, context: RouteContext) {
   }
   const { incidentId } = await context.params
   const body = await req.json().catch(() => ({}))
+  const retryAlert = body.action === 'retry_alert'
   const result = await backendRequest(
-    `/internal/admin/safety/incidents/${encodeURIComponent(incidentId)}/actions`,
+    retryAlert
+      ? `/internal/admin/safety/incidents/${encodeURIComponent(incidentId)}/alert-retry`
+      : `/internal/admin/safety/incidents/${encodeURIComponent(incidentId)}/actions`,
     {
       method: 'POST',
       sessionToken: current.sessionToken,
-      body: JSON.stringify(body),
+      body: JSON.stringify(retryAlert ? { note: body.note || '' } : body),
     }
   )
   return Response.json(result.data, { status: result.status })

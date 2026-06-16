@@ -651,6 +651,51 @@ def apply_incident_action(
     return get_safety_incident(cur, incident_id)
 
 
+def retry_safety_alert(
+    cur,
+    *,
+    incident_id: str,
+    actor_user_id: str,
+    note: str = "",
+) -> dict:
+    incident = get_safety_incident(cur, incident_id)
+    if not incident:
+        raise LookupError("safety_incident_not_found")
+    if incident["final_risk_level"] != "high":
+        raise ValueError("safety_alert_retry_requires_high_risk")
+    if incident["status"] not in ACTIVE_INCIDENT_STATUSES:
+        raise ValueError("safety_alert_retry_requires_active_incident")
+    if incident["alert_status"] != "failed":
+        raise ValueError("safety_alert_retry_requires_failed_alert")
+
+    cur.execute(
+        """
+        UPDATE safety_incidents
+        SET alert_status = 'pending',
+            alert_attempt_count = 0,
+            alert_last_error = NULL,
+            alert_last_attempt_at = NULL,
+            updated_at = ?
+        WHERE incident_id = ?
+        """,
+        (now_iso(), incident_id),
+    )
+    add_incident_event(
+        cur,
+        incident_id=incident_id,
+        event_type="alert_retry_queued",
+        actor_user_id=actor_user_id,
+        from_status=incident["status"],
+        to_status=incident["status"],
+        note=note,
+        metadata={
+            "previous_attempt_count": incident["alert_attempt_count"],
+            "previous_error": incident["alert_last_error"],
+        },
+    )
+    return get_safety_incident(cur, incident_id)
+
+
 def record_sensitive_access(
     cur,
     *,

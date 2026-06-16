@@ -468,7 +468,7 @@ export function ChatClient({
           {messages.length === 0 && (
             <EmptyState
               title="还没有开始对话"
-              body="你可以写下一件具体的事、一种情绪，或一句现在卡住的话。"
+              body="你可以写下一件具体的事、一种情绪，或一句现在想说的话。"
             />
           )}
 

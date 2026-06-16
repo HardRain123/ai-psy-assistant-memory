@@ -1,6 +1,6 @@
 # 心理咨询 Agent 后端 MVP
 
-这是一个供 Dify HTTP Request 节点调用的心理支持/情绪陪伴/自助反思后端服务。当前 MVP 支持 50 分钟咨询 session 管理、长期记忆保存、咨询总结保存、上下文聚合、自动结束 session、后台任务扫描、咨询交接文档生成，以及 SQLite 本地开发和 PostgreSQL 线上部署。
+这是一个供 Dify HTTP Request 节点调用的心理支持/情绪陪伴/自助反思后端服务。当前 MVP 支持 50 分钟咨询 session 管理、长期记忆保存、咨询总结保存、上下文聚合、自动结束 session、后台任务扫描、咨询交接文档生成，并统一使用 PostgreSQL 作为本地和线上数据库。
 
 重要边界：本系统不是医疗诊断工具，不能替代专业心理咨询、精神科医生或紧急救援。人工安全值守时间为工作日 09:00–18:00（中国时间），不是 7×24 小时危机服务。
 
@@ -32,8 +32,11 @@
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+docker compose up -d postgres
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+首次启动 PostgreSQL 后，应用会自动创建空表结构。项目根目录的 `.env` 已配置本地连接到 `127.0.0.1:5433`。
 
 根目录 `main.py` 仍保留 `from app.main import app`，兼容旧的 `uvicorn main:app` 启动方式。`Procfile` 已指向 `app.main:app`。
 
@@ -41,7 +44,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 参考 `.env.example`：
 
-- `DATABASE_URL`：数据库连接。默认 `sqlite:///data.db`。
+- `DATABASE_URL`：数据库连接，本地默认指向 Docker PostgreSQL。
 - `APP_ENV`：运行环境，例如 `development` 或 `production`。
 - `SESSION_LIMIT_MINUTES`：单次咨询时长，默认 `50`。
 - `LOG_LEVEL`：日志等级，默认 `INFO`。
@@ -55,19 +58,15 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 本项目不在代码里写死数据库账号、密码或 API Key。
 
-## SQLite 本地开发
+## PostgreSQL 配置
 
-默认配置：
+本地默认配置：
 
 ```text
-DATABASE_URL=sqlite:///data.db
+DATABASE_URL=postgresql://ai_psy_app:本地密码@127.0.0.1:5433/ai_psy_assistant
 ```
 
-应用启动时会执行 `init_db()`，自动创建或补齐表结构。SQLite 适合本地开发和小范围调试，不建议作为线上多实例服务数据库。
-
-## PostgreSQL 线上配置
-
-线上设置：
+线上设置示例：
 
 ```text
 DATABASE_URL=postgresql://user:password@host:5432/dbname
@@ -76,7 +75,7 @@ SESSION_LIMIT_MINUTES=50
 LOG_LEVEL=INFO
 ```
 
-依赖中已包含 `psycopg[binary]`。应用启动时同样会执行 `init_db()` 创建表和索引。也可以参考 [docs/postgresql_schema.sql](docs/postgresql_schema.sql) 先手动建表。
+依赖中已包含 `psycopg[binary]`。应用启动时会执行 `init_db()` 创建表和索引。旧的 `data.db` 仅作为手工回退副本，不会自动迁移或读取。
 
 ## 数据表
 

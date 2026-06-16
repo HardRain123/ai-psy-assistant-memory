@@ -19,6 +19,60 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def _screening_safety_evidence(result: dict) -> dict:
+    snapshot = result["snapshot"]
+    safety = snapshot.get("safety", {})
+    flags = safety.get("flags", [])
+    safety_domain = snapshot.get("domains", {}).get("safety", {})
+    current_danger = safety_domain.get("current_danger")
+    screening_summaries = [
+        {
+            "screening_id": item.get("screening_id"),
+            "instrument": item.get("instrument"),
+            "title": item.get("title"),
+            "score": item.get("score"),
+            "severity": item.get("severity"),
+            "label": item.get("label"),
+            "risk_level": item.get("risk_level"),
+            "risk_flags": item.get("risk_flags", []),
+        }
+        for item in result.get("results", [])
+    ]
+    trigger_summary = []
+    if "self_harm_item_positive" in flags:
+        trigger_summary.append("PHQ-9 第 9 题阳性：提示近两周出现死亡或自伤相关想法。")
+    if "current_safety_urgent" in flags:
+        trigger_summary.append("安全补充模块提示当前可能存在强烈想法、具体计划、工具条件或缺少支持。")
+    elif "current_safety_high_attention" in flags:
+        trigger_summary.append("安全补充模块提示当前仍需高关注，但未达到最高紧急层级。")
+    elif "recent_self_harm_thoughts_without_current_plan" in flags:
+        trigger_summary.append("近期出现过自伤相关想法，补充评估暂未提示当前计划或工具条件。")
+    if not trigger_summary and safety.get("risk_level") in {"medium", "high"}:
+        trigger_summary.append("状态评估综合分层提示当前安全风险升高。")
+
+    return {
+        "screening_ids": [item.get("screening_id") for item in result.get("results", [])],
+        "instruments": [item.get("instrument") for item in result.get("results", [])],
+        "screening_summaries": screening_summaries,
+        "stage": snapshot.get("stage"),
+        "current_danger": current_danger,
+        "safety_level": safety.get("risk_level", "none"),
+        "risk_flags": flags,
+        "safety_domain": {
+            key: value
+            for key, value in {
+                "supplement_completed": safety_domain.get("supplement_completed"),
+                "current_thought": safety_domain.get("current_thought"),
+                "plan": safety_domain.get("plan"),
+                "means": safety_domain.get("means"),
+                "support": safety_domain.get("support"),
+            }.items()
+            if value not in {None, ""}
+        },
+        "trigger_summary": trigger_summary,
+    }
+
+
 @router.get("/screening/config")
 def get_screening_config():
     return instrument_config()
@@ -90,14 +144,7 @@ def submit_screening_batch(req: ScreeningBatchRequest):
                 ),
                 risk_flags=flags,
                 reason="筛查提示当前安全风险",
-                source_evidence={
-                    "screening_ids": [item.get("screening_id") for item in result["results"]],
-                    "instruments": [item.get("instrument") for item in result["results"]],
-                    "stage": result["snapshot"].get("stage"),
-                    "current_danger": current_danger,
-                    "safety_level": safety.get("risk_level", "none"),
-                    "risk_flags": flags,
-                },
+                source_evidence=_screening_safety_evidence(result),
             )
             result["safety_incident_id"] = incident["incident_id"] if incident else None
             result["immediate_action_required"] = bool(
@@ -147,14 +194,12 @@ def submit_screening(instrument: str, req: ScreeningSubmitRequest):
                 ),
                 risk_flags=flags,
                 reason="筛查提示当前安全风险",
-                source_evidence={
-                    "screening_id": result.get("screening_id"),
-                    "instrument": result.get("instrument"),
-                    "stage": result["snapshot"].get("stage"),
-                    "current_danger": current_danger,
-                    "safety_level": safety.get("risk_level", "none"),
-                    "risk_flags": flags,
-                },
+                source_evidence=_screening_safety_evidence(
+                    {
+                        **result,
+                        "results": [result],
+                    }
+                ),
             )
             result["safety_incident_id"] = incident["incident_id"] if incident else None
             result["immediate_action_required"] = bool(
